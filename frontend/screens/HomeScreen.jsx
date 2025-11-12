@@ -180,6 +180,22 @@ export default function HomeScreen({ navigation, route }) {
     navigation.navigate("History", { user })
   }
 
+  // Add this function for Tips navigation
+  const handleGoToTips = () => {
+    navigation.navigate("Tips", { user })
+  }
+
+  // Add this function for About Us navigation
+  const handleGoToAbout = () => {
+    navigation.navigate("Aboutus", { user })
+  }
+
+  // Add this function for Help navigation
+  const handleGoToHelp = () => {
+    setDrawerVisible(false)
+    navigation.navigate("Help", { user })
+  }
+
   const sendMessage = async () => {
     if (!inputMessage.trim()) return
 
@@ -265,7 +281,7 @@ export default function HomeScreen({ navigation, route }) {
   if (!user) {
     return (
       <LinearGradient
-        colors={['#F8F9F7', '#F1F3F0', '#FFFFFF']}
+        colors={['#D8CEB8', '#F5F2ED', '#FFFFFF']}
         style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}
       >
         <Text style={styles.loadingText}>Loading...</Text>
@@ -275,7 +291,7 @@ export default function HomeScreen({ navigation, route }) {
 
   return (
     <LinearGradient
-      colors={['#F8F9F7', '#F1F3F0', '#FFFFFF']}
+      colors={['#D8CEB8', '#F5F2ED', '#FFFFFF']}
       style={styles.container}
     >
       <ScrollView 
@@ -302,7 +318,7 @@ export default function HomeScreen({ navigation, route }) {
             
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/logo3.png')}
+                source={require('../assets/logo5.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -310,13 +326,6 @@ export default function HomeScreen({ navigation, route }) {
 
             {/* Empty space to balance the header */}
             <View style={styles.placeholder} />
-          </View>
-
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0] || 'there'}!</Text>
-            <Text style={styles.heroTitle}>Your Skin's Best Friend</Text>
-            <Text style={styles.heroSubtitle}>Personalized care, powered by science</Text>
           </View>
 
           {/* Main Action Cards */}
@@ -327,7 +336,7 @@ export default function HomeScreen({ navigation, route }) {
               activeOpacity={0.9}
             >
               <LinearGradient
-                colors={['#A67B5B', '#C19A6B']}
+                colors={['#A36B4F', '#C1896B']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.mainActionGradient}
@@ -337,7 +346,7 @@ export default function HomeScreen({ navigation, route }) {
                     <Text style={styles.mainActionIcon}>◉</Text>
                   </View>
                   <View style={styles.mainActionText}>
-                    <Text style={styles.mainActionTitle}>Skin Analysis</Text>
+                    <Text style={styles.mainActionTitle}>Face Analysis</Text>
                     <Text style={styles.mainActionDesc}>Get personalized recommendations</Text>
                   </View>
                   <View style={styles.mainActionArrow}>
@@ -353,7 +362,7 @@ export default function HomeScreen({ navigation, route }) {
               activeOpacity={0.9}
             >
               <LinearGradient
-                colors={['#A67B5B', '#C19A6B']}
+                colors={['#58656E', '#7A8A94']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.mainActionGradient}
@@ -411,13 +420,6 @@ export default function HomeScreen({ navigation, route }) {
           {/* Quick Actions Grid */}
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickGrid}>
-            <TouchableOpacity style={styles.quickCard}>
-              <View style={styles.quickIconBox}>
-                <Text style={styles.quickIcon}>◫</Text>
-              </View>
-              <Text style={styles.quickLabel}>Appointments</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity 
               style={styles.quickCard}
               onPress={handleGoToHistory}
@@ -438,24 +440,27 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.quickLabel}>Find Clinics</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickCard}>
+            <TouchableOpacity 
+              style={styles.quickCard}
+              onPress={handleGoToTips}
+            >
               <View style={styles.quickIconBox}>
                 <Text style={styles.quickIcon}>◈</Text>
               </View>
               <Text style={styles.quickLabel}>Tips</Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Health Tips Card */}
-          <View style={styles.tipsCard}>
-            <View style={styles.tipsHeader}>
-              <Text style={styles.tipsIcon}>💡</Text>
-              <Text style={styles.tipsTitle}>Today's Tip</Text>
-            </View>
-            <Text style={styles.tipsContent}>
-              Remember to apply sunscreen 30 minutes before sun exposure. SPF 30+ is recommended for daily protection.
-            </Text>
-          </View>
+            {/* Updated About Us button with new minimalist logo */}
+            <TouchableOpacity 
+              style={styles.quickCard}
+              onPress={handleGoToAbout}
+            >
+              <View style={styles.quickIconBox}>
+                <Text style={styles.quickIcon}>ⓘ</Text>
+              </View>
+              <Text style={styles.quickLabel}>About Us</Text>
+            </TouchableOpacity>
+          </View>       
         </Animated.View>
       </ScrollView>
 
@@ -495,7 +500,7 @@ export default function HomeScreen({ navigation, route }) {
             ]}
           >
             <LinearGradient
-              colors={['#F8F9F7', '#FFFFFF', '#F1F3F0']}
+              colors={['#D8CEB8', '#F5F2ED', '#FFFFFF']}
               style={styles.drawerHeader}
             >
               <View style={styles.drawerProfileSection}>
@@ -542,7 +547,21 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.drawerItemText}>Privacy</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.drawerItem}>
+              <TouchableOpacity 
+                style={styles.drawerItem}
+                onPress={handleGoToAbout}
+              >
+                <View style={styles.drawerIconBox}>
+                  <Text style={styles.drawerItemIcon}>ⓘ</Text>
+                </View>
+                <Text style={styles.drawerItemText}>About Us</Text>
+              </TouchableOpacity>
+
+              {/* Added Help navigation */}
+              <TouchableOpacity 
+                style={styles.drawerItem}
+                onPress={handleGoToHelp}
+              >
                 <View style={styles.drawerIconBox}>
                   <Text style={styles.drawerItemIcon}>◇</Text>
                 </View>
@@ -591,7 +610,7 @@ export default function HomeScreen({ navigation, route }) {
         >
           <View style={styles.chatContainer}>
             <LinearGradient
-              colors={['#1B4332', '#2D6A4F']}
+              colors={['#58656E', '#7A8A94']}
               style={styles.chatHeader}
             >
               <View style={styles.chatHeaderInfo}>
@@ -684,7 +703,7 @@ export default function HomeScreen({ navigation, route }) {
                 disabled={!inputMessage.trim() || isLoading}
               >
                 <LinearGradient
-                  colors={inputMessage.trim() && !isLoading ? ['#1B4332', '#2D6A4F'] : ['#E0E0E0', '#E0E0E0']}
+                  colors={inputMessage.trim() && !isLoading ? ['#58656E', '#7A8A94'] : ['#E0E0E0', '#E0E0E0']}
                   style={styles.sendButtonGradient}
                 >
                   <Text style={styles.sendButtonText}>↑</Text>
@@ -715,7 +734,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4E5450',
+    color: '#58656E',
     fontFamily: 'System',
   },
   
@@ -760,9 +779,9 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(27, 67, 50, 0.9)',
+    backgroundColor: 'rgba(90, 101, 110, 0.9)',
     borderRadius: 28,
-    shadowColor: '#1B4332',
+    shadowColor: '#58656E',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -786,7 +805,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#4E5450',
+    color: '#58656E',
     marginBottom: 8,
     fontWeight: '500',
     fontFamily: 'System',
@@ -795,7 +814,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#A67B5B',
+    color: '#A36B4F',
     marginBottom: 8,
     letterSpacing: -0.5,
     textAlign: 'center',
@@ -803,7 +822,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontSize: 16,
-    color: '#4E5450',
+    color: '#58656E',
     fontWeight: '400',
     textAlign: 'center',
     fontFamily: 'System',
@@ -897,18 +916,18 @@ const styles = StyleSheet.create({
   statIcon: {
     fontSize: 28,
     marginBottom: 8,
-    color: '#A67B5B',
+    color: '#A36B4F',
   },
   statNumber: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#A67B5B',
+    color: '#A36B4F',
     marginBottom: 4,
     fontFamily: 'System',
   },
   statLabel: {
     fontSize: 12,
-    color: '#4E5450',
+    color: '#58656E',
     fontWeight: '500',
     fontFamily: 'System',
   },
@@ -917,7 +936,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#A67B5B',
+    color: '#A36B4F',
     marginBottom: 16,
     letterSpacing: -0.5,
     fontFamily: 'System',
@@ -956,11 +975,11 @@ const styles = StyleSheet.create({
   },
   quickIcon: {
     fontSize: 24,
-    color: '#A67B5B',
+    color: '#A36B4F',
   },
   quickLabel: {
     fontSize: 11,
-    color: '#4E5450',
+    color: '#58656E',
     fontWeight: '600',
     textAlign: 'center',
     fontFamily: 'System',
@@ -987,17 +1006,17 @@ const styles = StyleSheet.create({
   tipsIcon: {
     fontSize: 28,
     marginRight: 10,
-    color: '#A67B5B',
+    color: '#A36B4F',
   },
   tipsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#A67B5B',
+    color: '#A36B4F',
     fontFamily: 'System',
   },
   tipsContent: {
     fontSize: 14,
-    color: '#4E5450',
+    color: '#58656E',
     lineHeight: 20,
     fontFamily: 'System',
   },
@@ -1009,7 +1028,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(166, 123, 91, 0.3)',
+    backgroundColor: 'rgba(163, 107, 79, 0.3)',
     zIndex: 1000,
   },
   drawerContent: {
@@ -1057,7 +1076,7 @@ const styles = StyleSheet.create({
   drawerProfilePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#A67B5B',
+    backgroundColor: '#A36B4F',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1070,13 +1089,13 @@ const styles = StyleSheet.create({
   drawerUserName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#A67B5B',
+    color: '#A36B4F',
     marginBottom: 4,
     fontFamily: 'System',
   },
   drawerUserEmail: {
     fontSize: 14,
-    color: '#4E5450',
+    color: '#58656E',
     fontFamily: 'System',
   },
   drawerMenu: {
@@ -1099,12 +1118,12 @@ const styles = StyleSheet.create({
   },
   drawerItemIcon: {
     fontSize: 16,
-    color: '#A67B5B',
+    color: '#A36B4F',
     fontWeight: '300',
   },
   drawerItemText: {
     fontSize: 16,
-    color: '#A67B5B',
+    color: '#A36B4F',
     fontWeight: '600',
     fontFamily: 'System',
   },
@@ -1139,9 +1158,9 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(27, 67, 50, 0.9)',
+    backgroundColor: 'rgba(90, 101, 110, 0.9)',
     borderRadius: 28,
-    shadowColor: '#1B4332',
+    shadowColor: '#58656E',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -1155,7 +1174,7 @@ const styles = StyleSheet.create({
   // Chat Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(166, 123, 91, 0.3)',
+    backgroundColor: 'rgba(163, 107, 79, 0.3)',
   },
   chatContainer: {
     flex: 1,
@@ -1246,7 +1265,7 @@ const styles = StyleSheet.create({
   },
   botAvatarText: {
     fontSize: 12,
-    color: '#A67B5B',
+    color: '#A36B4F',
     fontWeight: '600',
   },
   messageContent: {
@@ -1264,13 +1283,13 @@ const styles = StyleSheet.create({
     borderColor: '#F1F3F0',
   },
   userMessageContent: {
-    backgroundColor: '#1B4332',
-    borderColor: '#1B4332',
+    backgroundColor: '#58656E',
+    borderColor: '#58656E',
   },
   messageText: {
     fontSize: 14,
     lineHeight: 18,
-    color: '#A67B5B',
+    color: '#58656E',
     marginBottom: 4,
     fontFamily: 'System',
   },
@@ -1278,11 +1297,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   botMessageText: {
-    color: '#A67B5B',
+    color: '#58656E',
   },
   messageTime: {
     fontSize: 10,
-    color: '#4E5450',
+    color: '#9BAAAE',
     alignSelf: 'flex-end',
     fontFamily: 'System',
   },
@@ -1298,7 +1317,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#4E5450',
+    backgroundColor: '#9BAAAE',
     marginHorizontal: 2,
   },
   inputContainer: {
@@ -1318,7 +1337,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     maxHeight: 80,
     fontSize: 14,
-    color: '#A67B5B',
+    color: '#58656E',
     borderWidth: 1,
     borderColor: '#E8EBE6',
     fontFamily: 'System',

@@ -8,11 +8,24 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  StatusBar,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { PYTHON_API_URL, API_URL } from "../config/api";
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// Color Theme
+const COLORS = {
+  charcoal: '#3A343C',
+  slate: '#58656E',
+  dustyBlue: '#9BAAAE',
+  terracotta: '#A36B4F',
+  sand: '#D8CEB8',
+  white: '#FFFFFF',
+  lightGray: '#F5F3F0',
+};
 
 // Key for storing user email
 const USER_EMAIL_KEY = "user_email";
@@ -235,18 +248,18 @@ export default function SkincareScreen({ navigation }) {
   // Get color based on severity
   const getSeverityColor = (severity) => {
     const colors = {
-      "None": "#7A8B7F",
-      "Very Mild": "#9B8B7E",
-      "Mild": "#A89F99",
-      "Moderate": "#8B8B8B",
-      "Severe": "#2C2C2C",
-      "Very Severe": "#2C2C2C",
-      "Few": "#9B8B7E",
-      "Several": "#8B8B8B",
-      "Many": "#2C2C2C",
-      "Heavy": "#2C2C2C",
+      "None": COLORS.dustyBlue,
+      "Very Mild": COLORS.sand,
+      "Mild": COLORS.slate,
+      "Moderate": COLORS.terracotta,
+      "Severe": COLORS.charcoal,
+      "Very Severe": COLORS.charcoal,
+      "Few": COLORS.sand,
+      "Several": COLORS.slate,
+      "Many": COLORS.charcoal,
+      "Heavy": COLORS.charcoal,
     };
-    return colors[severity] || "#9B8B7E";
+    return colors[severity] || COLORS.slate;
   };
 
   // Level Bar Component
@@ -277,14 +290,16 @@ export default function SkincareScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.sand} />
+      
+      {/* Floating Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <View style={styles.backIcon} />
+          <Icon name="arrow-back" size={24} color={COLORS.charcoal} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Skin Analysis</Text>
@@ -297,11 +312,7 @@ export default function SkincareScreen({ navigation }) {
           onPress={viewHistory}
           activeOpacity={0.7}
         >
-          <View style={styles.historyIcon}>
-            <View style={styles.historyLine1} />
-            <View style={styles.historyLine2} />
-            <View style={styles.historyLine3} />
-          </View>
+          <Icon name="history" size={24} color={COLORS.charcoal} />
         </TouchableOpacity>
       </View>
 
@@ -326,10 +337,7 @@ export default function SkincareScreen({ navigation }) {
                   setLastImageHash(null);
                 }}
               >
-                <View style={styles.xIcon}>
-                  <View style={styles.xLine1} />
-                  <View style={styles.xLine2} />
-                </View>
+                <Icon name="close" size={20} color={COLORS.white} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -354,14 +362,7 @@ export default function SkincareScreen({ navigation }) {
             onPress={() => pickImage(false)}
             activeOpacity={0.8}
           >
-            <View style={styles.uploadIcon}>
-              <View style={styles.imageIcon}>
-                <View style={styles.imageFrame} />
-                <View style={styles.imageMountain1} />
-                <View style={styles.imageMountain2} />
-                <View style={styles.imageSun} />
-              </View>
-            </View>
+            <Icon name="photo-library" size={32} color={COLORS.terracotta} />
             <Text style={styles.uploadButtonText}>Gallery</Text>
           </TouchableOpacity>
 
@@ -370,13 +371,7 @@ export default function SkincareScreen({ navigation }) {
             onPress={() => pickImage(true)}
             activeOpacity={0.8}
           >
-            <View style={styles.uploadIcon}>
-              <View style={styles.cameraIconWrapper}>
-                <View style={styles.cameraIconBody}>
-                  <View style={styles.cameraIconLens} />
-                </View>
-              </View>
-            </View>
+            <Icon name="photo-camera" size={32} color={COLORS.terracotta} />
             <Text style={styles.uploadButtonText}>Camera</Text>
           </TouchableOpacity>
         </View>
@@ -390,13 +385,10 @@ export default function SkincareScreen({ navigation }) {
             activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#FEFDFB" size="small" />
+              <ActivityIndicator color={COLORS.white} size="small" />
             ) : (
               <>
-                <View style={styles.analyzeIcon}>
-                  <View style={styles.searchCircle} />
-                  <View style={styles.searchHandle} />
-                </View>
+                <Icon name="search" size={20} color={COLORS.white} style={styles.analyzeIcon} />
                 <Text style={styles.analyzeButtonText}>Analyze Skin</Text>
               </>
             )}
@@ -497,12 +489,10 @@ export default function SkincareScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 {saving ? (
-                  <ActivityIndicator color="#FEFDFB" size="small" />
+                  <ActivityIndicator color={COLORS.white} size="small" />
                 ) : (
                   <>
-                    <View style={styles.saveIcon}>
-                      <View style={styles.saveShape} />
-                    </View>
+                    <Icon name="save" size={18} color={COLORS.white} style={styles.saveIcon} />
                     <Text style={styles.saveButtonText}>Save to History</Text>
                   </>
                 )}
@@ -517,9 +507,7 @@ export default function SkincareScreen({ navigation }) {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={styles.refreshIcon}>
-                  <View style={styles.refreshArrow} />
-                </View>
+                <Icon name="refresh" size={18} color={COLORS.terracotta} style={styles.refreshIcon} />
                 <Text style={styles.reanalyzeButtonText}>New Analysis</Text>
               </TouchableOpacity>
             </View>
@@ -533,106 +521,71 @@ export default function SkincareScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.sand,
   },
   header: {
-    backgroundColor: "#FEFDFB",
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5DDD5",
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: 'transparent',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FEFDFB",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
-    borderWidth: 1.5,
-    borderColor: "#E5DDD5",
-  },
-  backIcon: {
-    width: 10,
-    height: 10,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: "#9B8B7E",
-    transform: [{ rotate: "45deg" }],
-    marginLeft: 3,
+    backgroundColor: 'transparent',
   },
   headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     marginBottom: 2,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: "#8B8B8B",
+    color: COLORS.slate,
     fontWeight: "400",
   },
   historyButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FEFDFB",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5DDD5",
-  },
-  historyIcon: {
-    width: 18,
-    height: 18,
-    justifyContent: "space-between",
-  },
-  historyLine1: {
-    width: 18,
-    height: 2,
-    backgroundColor: "#9B8B7E",
-    borderRadius: 1,
-  },
-  historyLine2: {
-    width: 14,
-    height: 2,
-    backgroundColor: "#9B8B7E",
-    borderRadius: 1,
-  },
-  historyLine3: {
-    width: 10,
-    height: 2,
-    backgroundColor: "#9B8B7E",
-    borderRadius: 1,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    paddingTop: 120, // Extra padding to account for floating header
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   // Image Quality Guide Styles
   qualityGuide: {
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   qualityGuideTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     marginBottom: 8,
   },
   qualityTips: {
@@ -640,26 +593,26 @@ const styles = StyleSheet.create({
   },
   qualityTip: {
     fontSize: 12,
-    color: "#7A8B7F",
+    color: COLORS.slate,
     marginBottom: 2,
   },
   qualityNote: {
     fontSize: 11,
-    color: "#8B8B8B",
+    color: COLORS.slate,
     fontStyle: "italic",
   },
   // Analysis Info
   analysisInfo: {
-    backgroundColor: "rgba(122, 139, 127, 0.1)",
+    backgroundColor: "rgba(155, 170, 174, 0.1)",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(122, 139, 127, 0.2)",
+    borderColor: "rgba(155, 170, 174, 0.2)",
   },
   analysisInfoText: {
     fontSize: 12,
-    color: "#7A8B7F",
+    color: COLORS.dustyBlue,
     fontWeight: "500",
     textAlign: "center",
   },
@@ -674,9 +627,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 320,
     borderRadius: 16,
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.lightGray,
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   removeImageButton: {
     position: "absolute",
@@ -685,39 +638,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(122, 139, 127, 0.8)",
+    backgroundColor: "rgba(58, 52, 60, 0.8)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#FEFDFB",
-  },
-  xIcon: {
-    width: 16,
-    height: 16,
-    position: "relative",
-  },
-  xLine1: {
-    position: "absolute",
-    width: 16,
-    height: 2,
-    backgroundColor: "#FEFDFB",
-    transform: [{ rotate: "45deg" }],
-    top: 7,
-  },
-  xLine2: {
-    position: "absolute",
-    width: 16,
-    height: 2,
-    backgroundColor: "#FEFDFB",
-    transform: [{ rotate: "-45deg" }],
-    top: 7,
+    borderColor: COLORS.white,
   },
   placeholderContainer: {
     height: 320,
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
@@ -728,29 +660,29 @@ const styles = StyleSheet.create({
   cameraBody: {
     width: 60,
     height: 48,
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.lightGray,
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   cameraLens: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: "#9B8B7E",
+    borderColor: COLORS.terracotta,
   },
   placeholderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     marginBottom: 4,
   },
   placeholderSubtext: {
     fontSize: 13,
-    color: "#8B8B8B",
+    color: COLORS.slate,
   },
   uploadSection: {
     flexDirection: "row",
@@ -759,141 +691,49 @@ const styles = StyleSheet.create({
   },
   uploadButton: {
     flex: 1,
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  uploadIcon: {
-    marginBottom: 12,
-  },
-  imageIcon: {
-    width: 40,
-    height: 32,
-    position: "relative",
-  },
-  imageFrame: {
-    width: 40,
-    height: 32,
-    borderWidth: 2,
-    borderColor: "#9B8B7E",
-    borderRadius: 4,
-  },
-  imageMountain1: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 14,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#9B8B7E",
-    bottom: 2,
-    left: 2,
-  },
-  imageMountain2: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 11,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#A89F99",
-    bottom: 2,
-    right: 4,
-  },
-  imageSun: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#9B8B7E",
-    top: 4,
-    right: 6,
-  },
-  cameraIconWrapper: {
-    width: 40,
-    height: 32,
-  },
-  cameraIconBody: {
-    width: 40,
-    height: 28,
-    backgroundColor: "#9B8B7E",
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5DDD5",
-  },
-  cameraIconLens: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#FEFDFB",
-  },
   uploadButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     letterSpacing: 0.1,
+    marginTop: 8,
   },
   analyzeButton: {
-    backgroundColor: "#7A8B7F",
+    backgroundColor: COLORS.terracotta,
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#7A8B7F",
+    shadowColor: COLORS.terracotta,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
     marginBottom: 24,
     borderWidth: 1.5,
-    borderColor: "#6A7B6F",
+    borderColor: COLORS.terracotta,
   },
   analyzeButtonDisabled: {
     opacity: 0.7,
   },
   analyzeIcon: {
-    width: 20,
-    height: 20,
     marginRight: 10,
-    position: "relative",
-  },
-  searchCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: "#FEFDFB",
-    position: "absolute",
-    top: 0,
-    left: 0,
-  },
-  searchHandle: {
-    width: 8,
-    height: 2,
-    backgroundColor: "#FEFDFB",
-    transform: [{ rotate: "45deg" }],
-    position: "absolute",
-    bottom: 2,
-    right: 2,
   },
   analyzeButtonText: {
-    color: "#FEFDFB",
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: "600",
     letterSpacing: 0.2,
@@ -910,32 +750,32 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     letterSpacing: -0.3,
   },
   resultBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.lightGray,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   resultBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#7A8B7F",
+    color: COLORS.dustyBlue,
     letterSpacing: 0.3,
   },
   basicInfoCard: {
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     borderRadius: 14,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -950,31 +790,31 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: "#9B8B7E",
+    color: COLORS.slate,
     fontWeight: "500",
   },
   infoValue: {
     fontSize: 14,
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     fontWeight: "600",
   },
   gradeText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#7A8B7F",
+    color: COLORS.terracotta,
   },
   infoDivider: {
     height: 1,
-    backgroundColor: "#E5DDD5",
+    backgroundColor: COLORS.dustyBlue,
     marginVertical: 12,
   },
   conditionsCard: {
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     borderRadius: 14,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -984,7 +824,7 @@ const styles = StyleSheet.create({
   conditionsTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
     marginBottom: 20,
     letterSpacing: -0.2,
   },
@@ -1008,7 +848,7 @@ const styles = StyleSheet.create({
   levelLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
   },
   levelValue: {
     fontSize: 13,
@@ -1017,11 +857,11 @@ const styles = StyleSheet.create({
   },
   progressBarBackground: {
     height: 8,
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.lightGray,
     borderRadius: 4,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   progressBarFill: {
     height: "100%",
@@ -1033,20 +873,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#E5DDD5",
+    borderTopColor: COLORS.dustyBlue,
   },
   metricItem: {
     alignItems: "center",
   },
   metricLabel: {
     fontSize: 12,
-    color: "#8B8B8B",
+    color: COLORS.slate,
     marginBottom: 4,
   },
   metricValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2C2C2C",
+    color: COLORS.charcoal,
   },
   actionButtons: {
     flexDirection: "row",
@@ -1055,79 +895,48 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: "#7A8B7F",
+    backgroundColor: COLORS.terracotta,
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#7A8B7F",
+    shadowColor: COLORS.terracotta,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1.5,
-    borderColor: "#6A7B6F",
+    borderColor: COLORS.terracotta,
   },
   saveButtonDisabled: {
     opacity: 0.7,
   },
   saveIcon: {
-    width: 18,
-    height: 18,
     marginRight: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  saveShape: {
-    width: 12,
-    height: 12,
-    borderWidth: 2,
-    borderColor: "#FEFDFB",
-    borderRadius: 1,
   },
   saveButtonText: {
-    color: "#FEFDFB",
+    color: COLORS.white,
     fontSize: 14,
     fontWeight: "600",
     letterSpacing: 0.2,
   },
   reanalyzeButton: {
     flex: 1,
-    backgroundColor: "#FEFDFB",
+    backgroundColor: COLORS.white,
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#E5DDD5",
+    borderColor: COLORS.dustyBlue,
   },
   refreshIcon: {
-    width: 18,
-    height: 18,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: "#9B8B7E",
-    borderRadius: 9,
-    borderTopColor: "transparent",
-    transform: [{ rotate: "-45deg" }],
-  },
-  refreshArrow: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
-    borderBottomWidth: 6,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#9B8B7E",
-    top: -8,
-    left: 1,
+    marginRight: 8,
   },
   reanalyzeButtonText: {
-    color: "#9B8B7E",
+    color: COLORS.terracotta,
     fontSize: 14,
     fontWeight: "600",
     letterSpacing: 0.2,

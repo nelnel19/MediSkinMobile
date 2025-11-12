@@ -9,10 +9,23 @@ import {
   Alert,
   ScrollView,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// Color Theme
+const COLORS = {
+  charcoal: '#3A343C',
+  slate: '#58656E',
+  dustyBlue: '#9BAAAE',
+  terracotta: '#A36B4F',
+  sand: '#D8CEB8',
+  white: '#FFFFFF',
+  lightGray: '#F5F3F0',
+};
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
@@ -141,23 +154,23 @@ export default function HistoryScreen({ navigation }) {
 
   const getGradeColor = (grade) => {
     const colors = {
-      'A': '#7A8B7F',
-      'B': '#9B8B7E',
-      'C': '#A89F99',
-      'D': '#8B8B8B',
-      'E': '#2C2C2C',
-      'F': '#2C2C2C',
+      'A': COLORS.terracotta,
+      'B': COLORS.slate,
+      'C': COLORS.dustyBlue,
+      'D': COLORS.charcoal,
+      'E': COLORS.charcoal,
+      'F': COLORS.charcoal,
     };
-    return colors[grade] || '#9B8B7E';
+    return colors[grade] || COLORS.slate;
   };
 
   const getConditionColor = (condition) => {
     if (condition?.toLowerCase().includes('excellent') || condition?.toLowerCase().includes('good')) {
-      return '#7A8B7F';
+      return COLORS.terracotta;
     } else if (condition?.toLowerCase().includes('fair') || condition?.toLowerCase().includes('average')) {
-      return '#9B8B7E';
+      return COLORS.slate;
     } else {
-      return '#8B8B8B';
+      return COLORS.dustyBlue;
     }
   };
 
@@ -260,10 +273,7 @@ export default function HistoryScreen({ navigation }) {
           style={styles.deleteButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <View style={styles.deleteIcon}>
-            <View style={styles.deleteLine1} />
-            <View style={styles.deleteLine2} />
-          </View>
+          <Icon name="delete-outline" size={20} color={COLORS.terracotta} />
         </TouchableOpacity>
       </View>
       
@@ -332,7 +342,7 @@ export default function HistoryScreen({ navigation }) {
           <View style={styles.distributionRow}>
             {stats.gradeDistribution.map((grade, index) => (
               <View key={index} style={styles.gradeItem}>
-                <Text style={[styles.gradeDot, { backgroundColor: getGradeColor(grade._id) }]} />
+                <View style={[styles.gradeDot, { backgroundColor: getGradeColor(grade._id) }]} />
                 <Text style={styles.gradeCount}>{grade.count}</Text>
                 <Text style={styles.gradeLabel}>{grade._id}</Text>
               </View>
@@ -346,7 +356,7 @@ export default function HistoryScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#7A8B7F" />
+        <ActivityIndicator size="large" color={COLORS.terracotta} />
         <Text style={styles.loadingText}>Loading your history...</Text>
       </View>
     );
@@ -354,14 +364,16 @@ export default function HistoryScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.sand} />
+      
+      {/* Floating Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <View style={styles.backIcon} />
+          <Icon name="arrow-back" size={24} color={COLORS.charcoal} />
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Analysis History</Text>
@@ -379,8 +391,8 @@ export default function HistoryScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#7A8B7F']}
-            tintColor="#7A8B7F"
+            colors={[COLORS.terracotta]}
+            tintColor={COLORS.terracotta}
           />
         }
       >
@@ -438,66 +450,61 @@ export default function HistoryScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F7F5',
+    backgroundColor: COLORS.sand,
   },
   header: {
-    backgroundColor: '#FEFDFB',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEFDFB',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-  },
-  backIcon: {
-    width: 10,
-    height: 10,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: '#9B8B7E',
-    transform: [{ rotate: '45deg' }],
-    marginLeft: 3,
+    backgroundColor: 'transparent',
   },
   headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 2,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     fontWeight: '400',
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingTop: 120, // Extra padding for floating header
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
   statsCard: {
-    backgroundColor: '#FEFDFB',
+    backgroundColor: COLORS.white,
     margin: 16,
+    marginTop: 120, // Adjusted for floating header
     padding: 20,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#E5DDD5',
+    borderColor: COLORS.dustyBlue,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -507,7 +514,7 @@ const styles = StyleSheet.create({
   statsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -523,30 +530,30 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#7A8B7F',
+    color: COLORS.terracotta,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     textAlign: 'center',
     fontWeight: '500',
   },
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#E5DDD5',
+    backgroundColor: COLORS.dustyBlue,
   },
   gradeDistribution: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E5DDD5',
+    borderTopColor: COLORS.dustyBlue,
   },
   distributionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -566,7 +573,7 @@ const styles = StyleSheet.create({
   gradeCount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 2,
   },
   historySection: {
@@ -582,23 +589,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
   },
   resultsCount: {
     fontSize: 14,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     fontWeight: '500',
   },
   listContent: {
     paddingBottom: 20,
   },
   historyItem: {
-    backgroundColor: '#FEFDFB',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1.5,
-    borderColor: '#E5DDD5',
+    borderColor: COLORS.dustyBlue,
   },
   firstItem: {
     marginTop: 8,
@@ -617,40 +624,19 @@ const styles = StyleSheet.create({
   },
   itemDate: {
     fontSize: 14,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     fontWeight: '500',
     marginBottom: 4,
   },
   analysisType: {
     fontSize: 12,
-    color: '#7A8B7F',
+    color: COLORS.terracotta,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   deleteButton: {
     padding: 4,
-  },
-  deleteIcon: {
-    width: 20,
-    height: 20,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteLine1: {
-    position: 'absolute',
-    width: 14,
-    height: 2,
-    backgroundColor: '#FF6B6B',
-    transform: [{ rotate: '45deg' }],
-  },
-  deleteLine2: {
-    position: 'absolute',
-    width: 14,
-    height: 2,
-    backgroundColor: '#FF6B6B',
-    transform: [{ rotate: '-45deg' }],
   },
   itemBody: {
     flexDirection: 'row',
@@ -663,7 +649,7 @@ const styles = StyleSheet.create({
   },
   gradeLabel: {
     fontSize: 10,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     marginBottom: 4,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -678,7 +664,7 @@ const styles = StyleSheet.create({
   },
   conditionLabel: {
     fontSize: 10,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     marginBottom: 4,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -694,7 +680,7 @@ const styles = StyleSheet.create({
   },
   detailsLabel: {
     fontSize: 10,
-    color: '#7A8B7F',
+    color: COLORS.terracotta,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
@@ -703,12 +689,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5DDD5',
+    borderTopColor: COLORS.dustyBlue,
   },
   detailsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 12,
   },
   detailSection: {
@@ -717,7 +703,7 @@ const styles = StyleSheet.create({
   detailSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7A8B7F',
+    color: COLORS.terracotta,
     marginBottom: 8,
   },
   detailRow: {
@@ -728,46 +714,47 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     fontWeight: '600',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9F7F5',
+    backgroundColor: COLORS.sand,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#FEFDFB',
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#E5DDD5',
+    borderColor: COLORS.dustyBlue,
     borderStyle: 'dashed',
     marginHorizontal: 8,
+    marginTop: 8,
   },
   emptyIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#F9F7F5',
+    backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: '#E5DDD5',
+    borderColor: COLORS.dustyBlue,
   },
   emptyIconText: {
     fontSize: 24,
@@ -775,34 +762,34 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2C2C2C',
+    color: COLORS.charcoal,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     marginBottom: 8,
     textAlign: 'center',
     fontWeight: '500',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#8B8B8B',
+    color: COLORS.slate,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   analyzeButton: {
-    backgroundColor: '#7A8B7F',
+    backgroundColor: COLORS.terracotta,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#6A7B6F',
+    borderColor: COLORS.terracotta,
   },
   analyzeButtonText: {
-    color: '#FEFDFB',
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.2,

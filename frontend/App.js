@@ -9,6 +9,8 @@ import SkincareScreen from "./screens/SkincareScreen";
 import HistoryScreen from "./screens/HIstoryScreen";
 import MapScreen from "./screens/MapScreen";
 import MiniMapScreen from "./screens/MiniMapScreen";
+import TipsScreen from "./screens/TipsScreen";
+import AboutusScreen from "./screens/AboutusScreen";
 
 const Stack = createStackNavigator();
 
@@ -24,6 +26,8 @@ export default function App() {
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
         <Stack.Screen name="MiniMap" component={MiniMapScreen} />
+        <Stack.Screen name="Tips" component={TipsScreen} />
+        <Stack.Screen name="Aboutus" component={AboutusScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

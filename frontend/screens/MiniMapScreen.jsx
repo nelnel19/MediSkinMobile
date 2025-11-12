@@ -8,15 +8,26 @@ import {
   Alert,
   Linking,
   Dimensions,
-  ScrollView, // Add this import
+  ScrollView,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
+
+// Color Theme
+const COLORS = {
+  charcoal: '#3A343C',
+  slate: '#58656E',
+  dustyBlue: '#9BAAAE',
+  terracotta: '#A36B4F',
+  sand: '#D8CEB8',
+  white: '#FFFFFF',
+  lightGray: '#F5F3F0',
+};
 
 // Real dermatology locations in Taguig/Manila area
 const REAL_DERMATOLOGY_LOCATIONS = [
@@ -139,15 +150,15 @@ const MiniMapScreen = () => {
   const [error, setError] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [mapReady, setMapReady] = useState(false);
+  const [showLocationsList, setShowLocationsList] = useState(false);
   const mapRef = useRef();
   const route = useRoute();
+  const navigation = useNavigation();
 
-  // Get data passed from previous screen
   const { userLocation: passedLocation, places: passedPlaces } = route.params || {};
 
   useEffect(() => {
     if (passedLocation && passedPlaces) {
-      // Use data passed from previous screen
       setUserLocation({
         latitude: passedLocation.latitude,
         longitude: passedLocation.longitude,
@@ -155,7 +166,6 @@ const MiniMapScreen = () => {
       setNearbyLocations(passedPlaces);
       setLoading(false);
     } else {
-      // Fallback: get location and find real places
       getCurrentLocation();
     }
   }, [passedLocation, passedPlaces]);
@@ -181,7 +191,6 @@ const MiniMapScreen = () => {
 
       setUserLocation(userLoc);
       
-      // Find real locations near user
       const nearbyRealLocations = findNearbyRealLocations(
         userLoc.latitude,
         userLoc.longitude
@@ -195,7 +204,6 @@ const MiniMapScreen = () => {
     }
   };
 
-  // Find real locations within 50km radius
   const findNearbyRealLocations = (userLat, userLng) => {
     const locationsWithDistance = REAL_DERMATOLOGY_LOCATIONS.map(location => {
       const distance = calculateDistance(
@@ -208,19 +216,18 @@ const MiniMapScreen = () => {
         ...location,
         distance: distance,
         displayDistance: distance < 1 
-          ? `${(distance * 1000).toFixed(0)} m` 
-          : `${distance.toFixed(1)} km`
+          ? `${(distance * 1000).toFixed(0)}m` 
+          : `${distance.toFixed(1)}km`
       };
     })
-    .filter(location => location.distance <= 50) // Within 50km radius
-    .sort((a, b) => a.distance - b.distance); // Sort by distance
+    .filter(location => location.distance <= 50)
+    .sort((a, b) => a.distance - b.distance);
 
     return locationsWithDistance;
   };
 
-  // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in kilometers
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -235,13 +242,13 @@ const MiniMapScreen = () => {
   const getMarkerColor = (type) => {
     switch (type) {
       case 'dermatologist':
-        return '#FF6B6B';
+        return COLORS.terracotta;
       case 'skin_clinic':
-        return '#4ECDC4';
+        return COLORS.slate;
       case 'skincare_shop':
-        return '#45B7D1';
+        return COLORS.dustyBlue;
       default:
-        return '#7A8B7F';
+        return COLORS.charcoal;
     }
   };
 
@@ -260,7 +267,6 @@ const MiniMapScreen = () => {
 
   const handleMarkerPress = (location) => {
     setSelectedLocation(location);
-    // Center map on selected location
     if (mapRef.current) {
       mapRef.current.animateToRegion({
         latitude: location.latitude,
@@ -302,32 +308,22 @@ const MiniMapScreen = () => {
     }
   };
 
-  const handleOpenInMaps = () => {
-    if (userLocation) {
-      const url = `https://www.openstreetmap.org/#map=13/${userLocation.latitude}/${userLocation.longitude}`;
-      Linking.openURL(url).catch(err => 
-        Alert.alert('Error', 'Could not open maps app')
-      );
-    }
-  };
-
   const navigateToLocation = (location) => {
     if (mapRef.current) {
-      // Animate to the specific location
       mapRef.current.animateToRegion({
         latitude: location.latitude,
         longitude: location.longitude,
-        latitudeDelta: 0.005, // Zoom in closer
+        latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       }, 1000);
       
       setSelectedLocation(location);
+      setShowLocationsList(false);
     }
   };
 
   const handleMapReady = () => {
     setMapReady(true);
-    // Small delay to ensure map is fully ready
     setTimeout(() => {
       fitToMarkers();
     }, 500);
@@ -336,8 +332,8 @@ const MiniMapScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7A8B7F" />
-        <Text style={styles.loadingText}>Loading map and locations...</Text>
+        <ActivityIndicator size="large" color={COLORS.terracotta} />
+        <Text style={styles.loadingText}>Loading locations...</Text>
       </View>
     );
   }
@@ -345,10 +341,10 @@ const MiniMapScreen = () => {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Icon name="error-outline" size={64} color="#FF6B6B" />
+        <Icon name="error-outline" size={48} color={COLORS.terracotta} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={getCurrentLocation}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -356,43 +352,34 @@ const MiniMapScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Minimalist Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dermatology Services Map</Text>
-        <Text style={styles.headerSubtitle}>
-          {nearbyLocations.length} locations found near you
-        </Text>
-      </View>
-
-      {/* Locations List */}
-      <View style={styles.locationsList}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {nearbyLocations.map((location) => (
-            <TouchableOpacity
-              key={location.id}
-              style={styles.locationChip}
-              onPress={() => navigateToLocation(location)}
-            >
-              <View style={[styles.chipIcon, { backgroundColor: getMarkerColor(location.type) }]}>
-                <FontAwesome5 
-                  name={getMarkerIcon(location.type)} 
-                  size={12} 
-                  color="#FFF" 
-                />
+        <View style={styles.headerLeft}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color={COLORS.charcoal} />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Map View</Text>
+            <View style={styles.headerRight}>
+              <View style={styles.countBadge}>
+                <Text style={styles.countText}>{nearbyLocations.length}</Text>
               </View>
-              <Text style={styles.chipText} numberOfLines={1}>
-                {location.name}
-              </Text>
-              <Text style={styles.chipDistance}>
-                {location.displayDistance}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              <TouchableOpacity 
+                style={styles.listToggleButton}
+                onPress={() => setShowLocationsList(!showLocationsList)}
+              >
+                <Icon name={showLocationsList ? "map" : "list"} size={22} color={COLORS.charcoal} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </View>
 
-      {/* Embedded Map */}
-      <View style={styles.mapContainer}>
+      {/* Map Container */}
+      <View style={styles.mapWrapper}>
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -406,10 +393,9 @@ const MiniMapScreen = () => {
           onMapReady={handleMapReady}
           showsUserLocation={true}
           showsMyLocationButton={false}
-          showsCompass={true}
-          showsScale={true}
+          showsCompass={false}
+          showsScale={false}
         >
-          {/* Nearby Locations Markers */}
           {nearbyLocations.map((location) => (
             <Marker
               key={location.id}
@@ -419,106 +405,163 @@ const MiniMapScreen = () => {
               }}
               onPress={() => handleMarkerPress(location)}
             >
-              <View style={[styles.markerContainer, { backgroundColor: getMarkerColor(location.type) }]}>
+              <View style={[styles.marker, { backgroundColor: getMarkerColor(location.type) }]}>
                 <FontAwesome5 
                   name={getMarkerIcon(location.type)} 
-                  size={12} 
-                  color="#FFF" 
+                  size={14} 
+                  color={COLORS.white} 
                 />
               </View>
             </Marker>
           ))}
         </MapView>
+
+        {/* Floating Control Buttons */}
+        <View style={styles.floatingControls}>
+          <TouchableOpacity style={styles.recenterButton} onPress={fitToMarkers}>
+            <Icon name="my-location" size={20} color={COLORS.charcoal} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.listToggleFloating}
+            onPress={() => setShowLocationsList(!showLocationsList)}
+          >
+            <Icon name={showLocationsList ? "map" : "list"} size={20} color={COLORS.charcoal} />
+            <Text style={styles.listToggleText}>
+              {showLocationsList ? "Map" : "List"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Selected Location Info */}
-      {selectedLocation && (
-        <View style={styles.selectedLocationCard}>
-          <View style={styles.selectedLocationHeader}>
-            <View style={[styles.locationIcon, { backgroundColor: getMarkerColor(selectedLocation.type) }]}>
-              <FontAwesome5 
-                name={getMarkerIcon(selectedLocation.type)} 
-                size={16} 
-                color="#FFF" 
-              />
-            </View>
-            <View style={styles.locationInfo}>
-              <Text style={styles.locationName}>{selectedLocation.name}</Text>
-              <View style={styles.ratingContainer}>
-                <FontAwesome5 name="star" size={12} color="#FFD700" />
-                <Text style={styles.rating}>{selectedLocation.rating}</Text>
-                <Text style={styles.locationType}>{selectedLocation.type.replace('_', ' ')}</Text>
-                <Text style={styles.distance}>{selectedLocation.displayDistance}</Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={() => setSelectedLocation(null)}>
-              <Icon name="close" size={24} color="#7A8B7F" />
+      {/* Vertical Locations List - Slides up from bottom */}
+      {showLocationsList && (
+        <View style={styles.locationsPanel}>
+          <View style={styles.panelHeader}>
+            <Text style={styles.panelTitle}>Nearby Places</Text>
+            <TouchableOpacity 
+              style={styles.closePanelButton}
+              onPress={() => setShowLocationsList(false)}
+            >
+              <Icon name="close" size={20} color={COLORS.slate} />
             </TouchableOpacity>
           </View>
+          
+          <ScrollView 
+            style={styles.locationsList}
+            showsVerticalScrollIndicator={false}
+          >
+            {nearbyLocations.map((location) => (
+              <TouchableOpacity
+                key={location.id}
+                style={[
+                  styles.locationCard,
+                  selectedLocation?.id === location.id && styles.locationCardActive
+                ]}
+                onPress={() => navigateToLocation(location)}
+              >
+                <View style={[styles.cardIcon, { backgroundColor: getMarkerColor(location.type) }]}>
+                  <FontAwesome5 
+                    name={getMarkerIcon(location.type)} 
+                    size={16} 
+                    color={COLORS.white} 
+                  />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardName} numberOfLines={2}>
+                    {location.name}
+                  </Text>
+                  <View style={styles.cardMeta}>
+                    <FontAwesome5 name="star" size={10} color={COLORS.terracotta} />
+                    <Text style={styles.cardRating}>{location.rating}</Text>
+                    <Text style={styles.cardDot}>•</Text>
+                    <Text style={styles.cardDistance}>{location.displayDistance}</Text>
+                  </View>
+                  <Text style={styles.cardAddress} numberOfLines={1}>
+                    {location.address}
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={18} color={COLORS.dustyBlue} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
-          <View style={styles.locationDetails}>
-            <View style={styles.detailRow}>
-              <FontAwesome5 name="map-marker-alt" size={12} color="#7A8B7F" />
-              <Text style={styles.detailText}>{selectedLocation.address}</Text>
+      {/* Selected Location Detail */}
+      {selectedLocation && !showLocationsList && (
+        <View style={styles.detailCard}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={() => setSelectedLocation(null)}
+          >
+            <Icon name="close" size={20} color={COLORS.slate} />
+          </TouchableOpacity>
+
+          <View style={styles.detailHeader}>
+            <View style={[styles.detailIcon, { backgroundColor: getMarkerColor(selectedLocation.type) }]}>
+              <FontAwesome5 
+                name={getMarkerIcon(selectedLocation.type)} 
+                size={20} 
+                color={COLORS.white} 
+              />
             </View>
-            <View style={styles.detailRow}>
-              <FontAwesome5 name="clock" size={12} color="#7A8B7F" />
-              <Text style={styles.detailText}>{selectedLocation.hours}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <FontAwesome5 name="phone" size={12} color="#7A8B7F" />
-              <Text style={styles.detailText}>{selectedLocation.phone}</Text>
+            <View style={styles.detailInfo}>
+              <Text style={styles.detailName}>{selectedLocation.name}</Text>
+              <View style={styles.detailMeta}>
+                <FontAwesome5 name="star" size={11} color={COLORS.terracotta} />
+                <Text style={styles.detailRating}>{selectedLocation.rating}</Text>
+                <Text style={styles.detailDot}>•</Text>
+                <Text style={styles.detailType}>{selectedLocation.type.replace('_', ' ')}</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.actionButtons}>
+          <View style={styles.detailBody}>
+            <View style={styles.infoRow}>
+              <FontAwesome5 name="map-marker-alt" size={12} color={COLORS.dustyBlue} />
+              <Text style={styles.infoText}>{selectedLocation.address}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <FontAwesome5 name="clock" size={12} color={COLORS.dustyBlue} />
+              <Text style={styles.infoText}>{selectedLocation.hours}</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailActions}>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={styles.actionBtn}
               onPress={() => handleCall(selectedLocation.phone)}
             >
-              <FontAwesome5 name="phone" size={14} color="#7A8B7F" />
-              <Text style={styles.actionText}>Call</Text>
+              <FontAwesome5 name="phone" size={16} color={COLORS.white} />
+              <Text style={styles.actionBtnText}>Call</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.actionButton, styles.directionsButton]}
+              style={[styles.actionBtn, styles.actionBtnSecondary]}
               onPress={() => handleDirections(selectedLocation)}
             >
-              <FontAwesome5 name="directions" size={14} color="#7A8B7F" />
-              <Text style={styles.actionText}>Navigate</Text>
+              <FontAwesome5 name="directions" size={16} color={COLORS.slate} />
+              <Text style={styles.actionBtnTextSecondary}>Navigate</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Legend */}
+      {/* Minimalist Legend */}
       <View style={styles.legend}>
-        <Text style={styles.legendTitle}>Legend</Text>
-        <View style={styles.legendItems}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#FF6B6B' }]} />
-            <Text style={styles.legendText}>Dermatologists</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#4ECDC4' }]} />
-            <Text style={styles.legendText}>Skin Clinics</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#45B7D1' }]} />
-            <Text style={styles.legendText}>Skincare Shops</Text>
-          </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: COLORS.terracotta }]} />
+          <Text style={styles.legendLabel}>Dermatologist</Text>
         </View>
-      </View>
-
-      {/* Control Buttons */}
-      <View style={styles.controlButtons}>
-        <TouchableOpacity style={styles.fitButton} onPress={fitToMarkers}>
-          <Icon name="my-location" size={20} color="#7A8B7F" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.externalMapButton} onPress={handleOpenInMaps}>
-          <FontAwesome5 name="external-link-alt" size={16} color="#7A8B7F" />
-        </TouchableOpacity>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: COLORS.slate }]} />
+          <Text style={styles.legendLabel}>Clinic</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: COLORS.dustyBlue }]} />
+          <Text style={styles.legendLabel}>Shop</Text>
+        </View>
       </View>
     </View>
   );
@@ -527,150 +570,226 @@ const MiniMapScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F7F5",
-    paddingTop: 50,
+    backgroundColor: COLORS.sand,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: "#F9F7F5",
+    backgroundColor: COLORS.sand,
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
-    color: '#7A8B7F',
-    fontFamily: 'System',
+    fontSize: 14,
+    color: COLORS.slate,
+    fontWeight: '400',
+    letterSpacing: 0.5,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: "#F9F7F5",
-    padding: 20,
+    backgroundColor: COLORS.sand,
+    padding: 32,
   },
   errorText: {
     marginTop: 16,
-    fontSize: 16,
-    color: '#FF6B6B',
+    fontSize: 14,
+    color: COLORS.slate,
     textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'System',
+    marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#7A8B7F',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: COLORS.terracotta,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: COLORS.white,
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'System',
+    letterSpacing: 0.5,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: COLORS.sand,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 4,
-    fontFamily: 'System',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontFamily: 'System',
-  },
-  locationsList: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FEFDFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
-  },
-  locationChip: {
+  headerLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9F7F5',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#E5DDD5',
-    minWidth: 120,
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  chipIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
+    backgroundColor: 'transparent',
   },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'System',
+  headerTextContainer: {
     flex: 1,
-    marginRight: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  chipDistance: {
-    fontSize: 10,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  mapContainer: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: COLORS.charcoal,
+    letterSpacing: -0.5,
+  },
+  countBadge: {
+    backgroundColor: COLORS.terracotta,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  countText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  listToggleButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  mapWrapper: {
     flex: 1,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.white,
   },
   map: {
     width: '100%',
     height: '100%',
   },
-  markerContainer: {
+  marker: {
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
-    shadowColor: '#000',
+    borderWidth: 2,
+    borderColor: COLORS.white,
+    shadowColor: COLORS.charcoal,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
   },
-  selectedLocationCard: {
+  floatingControls: {
     position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
-    backgroundColor: '#FEFDFB',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    top: 12,
+    right: 12,
+    gap: 8,
   },
-  selectedLocationHeader: {
+  recenterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.charcoal,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  listToggleFloating: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.charcoal,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  listToggleText: {
+    fontSize: 9,
+    color: COLORS.charcoal,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  // Locations Panel Styles
+  locationsPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.6,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: COLORS.charcoal,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    paddingBottom: 20,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightGray,
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.charcoal,
+  },
+  closePanelButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationsList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: COLORS.white,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
   },
-  locationIcon: {
+  locationCardActive: {
+    backgroundColor: COLORS.lightGray,
+    borderWidth: 1.5,
+    borderColor: COLORS.terracotta,
+  },
+  cardIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -678,154 +797,180 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  locationInfo: {
+  cardContent: {
     flex: 1,
   },
-  locationName: {
-    fontSize: 18,
+  cardName: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'System',
+    color: COLORS.charcoal,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  cardRating: {
+    fontSize: 12,
+    color: COLORS.slate,
+    fontWeight: '500',
+  },
+  cardDot: {
+    fontSize: 12,
+    color: COLORS.dustyBlue,
+  },
+  cardDistance: {
+    fontSize: 12,
+    color: COLORS.slate,
+    fontWeight: '500',
+  },
+  cardAddress: {
+    fontSize: 11,
+    color: COLORS.dustyBlue,
+    marginTop: 2,
+  },
+  detailCard: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: COLORS.charcoal,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingRight: 32,
+  },
+  detailIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  detailInfo: {
+    flex: 1,
+  },
+  detailName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.charcoal,
     marginBottom: 4,
   },
-  ratingContainer: {
+  detailMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  rating: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'System',
+  detailRating: {
+    fontSize: 12,
+    color: COLORS.slate,
+    fontWeight: '600',
   },
-  locationType: {
-    marginLeft: 12,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
+  detailDot: {
+    fontSize: 12,
+    color: COLORS.dustyBlue,
+  },
+  detailType: {
+    fontSize: 12,
+    color: COLORS.slate,
     textTransform: 'capitalize',
   },
-  distance: {
-    marginLeft: 12,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
-  },
-  locationDetails: {
+  detailBody: {
     marginBottom: 16,
+    gap: 10,
   },
-  detailRow: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    gap: 10,
   },
-  detailText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'System',
-    fontWeight: '500',
+  infoText: {
     flex: 1,
+    fontSize: 12,
+    color: COLORS.slate,
+    lineHeight: 16,
   },
-  actionButtons: {
+  detailActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  actionButton: {
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#F9F7F5',
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-    flex: 0.48,
     justifyContent: 'center',
+    backgroundColor: COLORS.terracotta,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 6,
   },
-  directionsButton: {
-    backgroundColor: '#FEFDFB',
+  actionBtnSecondary: {
+    backgroundColor: COLORS.lightGray,
   },
-  actionText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
+  actionBtnText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  actionBtnTextSecondary: {
+    color: COLORS.slate,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   legend: {
     position: 'absolute',
-    top: 180,
+    top: 140,
     left: 20,
-    backgroundColor: 'rgba(254, 253, 251, 0.95)',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5DDD5',
-  },
-  legendTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2C2C2C',
-    marginBottom: 8,
-    fontFamily: 'System',
-  },
-  legendItems: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 10,
+    padding: 10,
     gap: 6,
+    shadowColor: COLORS.charcoal,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 6,
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  legendText: {
-    fontSize: 10,
-    color: '#666',
-    fontFamily: 'System',
-  },
-  controlButtons: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    gap: 12,
-  },
-  fitButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FEFDFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-  },
-  externalMapButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FEFDFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
+  legendLabel: {
+    fontSize: 11,
+    color: COLORS.slate,
+    fontWeight: '500',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,17 +9,17 @@ import {
   ScrollView,
   Dimensions,
   Linking,
+  TextInput,
+  StatusBar,
 } from 'react-native';
 import * as Location from 'expo-location';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-// Updated dermatology clinics database for Philippines with new data
 const DERMATOLOGY_CLINICS = [
-  // Taguig/BGC Area Clinics
   {
     id: '1',
     name: 'SKIN Dermatology & Laser Center',
@@ -224,8 +224,6 @@ const DERMATOLOGY_CLINICS = [
     rating: 4.6,
     website: 'aqskinsolutionsph.com'
   },
-
-  // New Skincare Shops
   {
     id: '18',
     name: 'Teviant Beauty',
@@ -346,8 +344,6 @@ const DERMATOLOGY_CLINICS = [
     rating: 4.3,
     website: 'celeteque.com.ph'
   },
-
-  // Additional clinics from original data for variety
   {
     id: '28',
     name: 'Skin Science Clinic',
@@ -377,13 +373,15 @@ const MapScreen = () => {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('dermatologist');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
 
   const categories = [
-    { id: 'dermatologist', name: 'Dermatologists', icon: 'user-md' },
-    { id: 'skin_clinic', name: 'Skin Clinics', icon: 'hospital' },
-    { id: 'skincare_shop', name: 'Skincare Shops', icon: 'shopping-bag' },
+    { id: 'all', name: 'All', icon: 'apps', color: '#58656E' },
+    { id: 'dermatologist', name: 'Doctors', icon: 'local-hospital', color: '#A36B4F' },
+    { id: 'skin_clinic', name: 'Clinics', icon: 'business', color: '#9BAAAE' },
+    { id: 'skincare_shop', name: 'Shops', icon: 'shopping-bag', color: '#58656E' },
   ];
 
   useEffect(() => {
@@ -394,11 +392,10 @@ const MapScreen = () => {
     if (location) {
       findNearestPlaces();
     }
-  }, [location, selectedCategory]);
+  }, [location, selectedCategory, searchQuery]);
 
-  // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in kilometers
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -406,8 +403,7 @@ const MapScreen = () => {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    return distance;
+    return R * c;
   };
 
   const getCurrentLocation = async () => {
@@ -415,12 +411,8 @@ const MapScreen = () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== 'granted') {
-        setError('Permission to access location was denied');
+        setError('Location access denied');
         setLoading(false);
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location services to find nearby dermatology services.'
-        );
         return;
       }
 
@@ -432,9 +424,8 @@ const MapScreen = () => {
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
       });
-
     } catch (error) {
-      setError('Error getting location: ' + error.message);
+      setError('Error getting location');
       setLoading(false);
     }
   };
@@ -447,57 +438,40 @@ const MapScreen = () => {
       const userLat = location.latitude;
       const userLon = location.longitude;
       
-      // Filter places by category and calculate distances
       const placesWithDistance = DERMATOLOGY_CLINICS
-        .filter(clinic => clinic.type === selectedCategory)
+        .filter(clinic => 
+          (selectedCategory === 'all' || clinic.type === selectedCategory) &&
+          (searchQuery === '' || clinic.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
         .map(clinic => {
-          const distance = calculateDistance(
-            userLat, 
-            userLon, 
-            clinic.latitude, 
-            clinic.longitude
-          );
+          const distance = calculateDistance(userLat, userLon, clinic.latitude, clinic.longitude);
           return {
             ...clinic,
             distance: distance,
-            displayDistance: distance < 1 
-              ? `${(distance * 1000).toFixed(0)} m` 
-              : `${distance.toFixed(1)} km`
+            displayDistance: distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`
           };
         })
-        .filter(clinic => clinic.distance <= 50) // Within 50km radius
-        .sort((a, b) => a.distance - b.distance); // Sort by distance
+        .filter(clinic => clinic.distance <= 50)
+        .sort((a, b) => a.distance - b.distance);
 
       setPlaces(placesWithDistance);
     } catch (error) {
-      setError('Error finding nearby places: ' + error.message);
+      setError('Error finding places');
     } finally {
       setLoading(false);
     }
   };
 
-  const getCategoryIcon = (type) => {
-    const iconConfig = {
-      dermatologist: { name: 'user-md', color: '#FF6B6B' },
-      skin_clinic: { name: 'hospital', color: '#4ECDC4' },
-      skincare_shop: { name: 'shopping-bag', color: '#45B7D1' },
-    };
-    
-    return iconConfig[type] || { name: 'map-marker-alt', color: '#666' };
-  };
-
   const handleCall = (phoneNumber) => {
-    const url = `tel:${phoneNumber}`;
-    Linking.openURL(url).catch(err => 
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => 
       Alert.alert('Error', 'Could not make a call')
     );
   };
 
   const openMaps = (place) => {
-    // Open Google Maps with exact coordinates for navigation
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}&travelmode=driving`;
-    Linking.openURL(url).catch(err => 
-      Alert.alert('Error', 'Could not open maps app')
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+    Linking.openURL(url).catch(() => 
+      Alert.alert('Error', 'Could not open maps')
     );
   };
 
@@ -506,193 +480,172 @@ const MapScreen = () => {
       website = 'https://' + website;
     }
     if (website) {
-      Linking.openURL(website).catch(err => 
+      Linking.openURL(website).catch(() => 
         Alert.alert('Error', 'Could not open website')
       );
     }
   };
 
-  const handleViewMap = () => {
-    // Pass the necessary data to MiniMap screen
-    navigation.navigate('MiniMap', {
-      userLocation: location,
-      places: places,
-      selectedCategory: selectedCategory
-    });
-  };
-
-  if (loading) {
+  if (loading && !location) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7A8B7F" />
-        <Text style={styles.loadingText}>Finding nearest dermatology services...</Text>
-        <Text style={styles.loadingSubtext}>Searching within 50km radius</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Icon name="error-outline" size={64} color="#FF6B6B" />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={getCurrentLocation}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
+        <ActivityIndicator size="large" color="#58656E" />
+        <Text style={styles.loadingText}>Finding location...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor="#D8CEB8" />
+      
+      {/* Minimal Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Find Dermatology Services</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color="#3A343C" />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Nearby</Text>
+              <Text style={styles.headerSubtitle}>{places.length} places</Text>
+            </View>
+          </View>
           <TouchableOpacity 
-            style={styles.viewMapButton}
-            onPress={handleViewMap}
+            style={styles.mapButton}
+            onPress={() => navigation.navigate('MiniMap', { userLocation: location, places, selectedCategory })}
           >
-            <FontAwesome5 name="map" size={16} color="#FFF" />
-            <Text style={styles.viewMapButtonText}>View Map</Text>
+            <Icon name="map" size={24} color="#3A343C" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.headerSubtitle}>Within 50km of your location</Text>
+
+        {/* Minimal Search */}
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
       </View>
 
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryContainer}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category.id && styles.categoryButtonSelected,
-            ]}
-            onPress={() => setSelectedCategory(category.id)}
-          >
-            <FontAwesome5
-              name={category.icon}
-              size={16}
-              color={selectedCategory === category.id ? '#FFF' : '#7A8B7F'}
-            />
-            <Text
-              style={[
-                styles.categoryText,
-                selectedCategory === category.id && styles.categoryTextSelected,
-              ]}
-            >
-              {category.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Location Info */}
-      <View style={styles.locationInfo}>
-        <Icon name="my-location" size={18} color="#7A8B7F" />
-        <Text style={styles.locationText}>
-          {places.length} {selectedCategory.replace('_', ' ')} found within 50km
-        </Text>
+      {/* Minimal Category Tabs */}
+      <View style={styles.categoryRow}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}
+        >
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category.id;
+            return (
+              <TouchableOpacity
+                key={category.id}
+                onPress={() => setSelectedCategory(category.id)}
+                activeOpacity={0.7}
+              >
+                {isSelected ? (
+                  <LinearGradient
+                    colors={[category.color, category.color + 'DD']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.categoryTabActive}
+                  >
+                    <Text style={styles.categoryTabTextActive}>
+                      {category.name}
+                    </Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.categoryTab}>
+                    <Text style={styles.categoryTabText}>
+                      {category.name}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Places List */}
       <ScrollView 
-        style={styles.placesContainer}
+        style={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
       >
-        {places.map((place) => {
-          const icon = getCategoryIcon(place.type);
-          return (
-            <View key={place.id} style={styles.placeCard}>
-              <View style={styles.placeHeader}>
-                <View style={[styles.placeIconContainer, { backgroundColor: icon.color }]}>
-                  <FontAwesome5 
-                    name={icon.name} 
-                    size={14} 
-                    color="#FFF" 
-                  />
-                </View>
-                <View style={styles.placeInfo}>
-                  <View style={styles.nameContainer}>
-                    <Text style={styles.placeName}>{place.name}</Text>
-                    <View style={styles.verifiedBadge}>
-                      <FontAwesome5 name="check-circle" size={12} color="#7A8B7F" />
-                    </View>
+        {places.map((place) => (
+          <View key={place.id} style={styles.card}>
+            {/* Card Header */}
+            <View style={styles.cardHeader}>
+              <View style={styles.cardLeft}>
+                <Text style={styles.cardTitle} numberOfLines={2}>{place.name}</Text>
+                <View style={styles.cardMeta}>
+                  <View style={styles.ratingBadge}>
+                    <Icon name="star" size={12} color="#F59E0B" />
+                    <Text style={styles.ratingText}>{place.rating}</Text>
                   </View>
-                  <View style={styles.ratingContainer}>
-                    <FontAwesome5 name="star" size={12} color="#FFD700" />
-                    <Text style={styles.rating}>{place.rating}</Text>
-                    <Text style={styles.distance}>{place.displayDistance} away</Text>
-                  </View>
+                  <View style={styles.divider} />
+                  <Text style={styles.distanceText}>{place.displayDistance}</Text>
                 </View>
-              </View>
-              
-              <View style={styles.placeDetails}>
-                <View style={styles.areaContainer}>
-                  <FontAwesome5 name="map-marker-alt" size={12} color="#7A8B7F" />
-                  <Text style={styles.placeArea}>{place.area}</Text>
-                </View>
-                
-                <View style={styles.hoursContainer}>
-                  <FontAwesome5 name="clock" size={12} color="#7A8B7F" />
-                  <Text style={styles.placeHours}>{place.hours}</Text>
-                </View>
-
-                {place.website && (
-                  <TouchableOpacity 
-                    style={styles.websiteContainer}
-                    onPress={() => openWebsite(place.website)}
-                  >
-                    <FontAwesome5 name="globe" size={12} color="#7A8B7F" />
-                    <Text style={styles.websiteText}>Visit Website</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <View style={styles.placeActions}>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleCall(place.phone)}
-                >
-                  <FontAwesome5 name="phone" size={14} color="#7A8B7F" />
-                  <Text style={styles.actionText}>Call</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.actionButton, styles.directionsButton]}
-                  onPress={() => openMaps(place)}
-                >
-                  <FontAwesome5 name="directions" size={14} color="#7A8B7F" />
-                  <Text style={styles.actionText}>Navigate</Text>
-                </TouchableOpacity>
               </View>
             </View>
-          );
-        })}
-        
+
+            {/* Card Details */}
+            <View style={styles.cardDetails}>
+              <View style={styles.detailRow}>
+                <Icon name="location-on" size={14} color="#666" />
+                <Text style={styles.detailText} numberOfLines={2}>{place.area}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Icon name="schedule" size={14} color="#666" />
+                <Text style={styles.detailText}>{place.hours}</Text>
+              </View>
+            </View>
+
+            {/* Card Actions */}
+            <View style={styles.cardActions}>
+              <TouchableOpacity 
+                style={styles.actionBtn}
+                onPress={() => handleCall(place.phone)}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['#58656E', '#3A343C']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionBtnGradient}
+                >
+                  <Icon name="phone" size={16} color="#FFF" />
+                  <Text style={styles.actionBtnText}>Call</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionBtnSecondary}
+                onPress={() => openMaps(place)}
+                activeOpacity={0.7}
+              >
+                <Icon name="directions" size={16} color="#A36B4F" />
+                <Text style={styles.actionBtnSecondaryText}>Directions</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
         {places.length === 0 && (
-          <View style={styles.noResults}>
-            <Icon name="location-off" size={48} color="#E5DDD5" />
-            <Text style={styles.noResultsText}>
-              No {selectedCategory.replace('_', ' ')} found within 50km
-            </Text>
-            <Text style={styles.noResultsSubtext}>
-              Try a different category or expand your search area
-            </Text>
+          <View style={styles.emptyState}>
+            <Icon name="search-off" size={48} color="#E0E0E0" />
+            <Text style={styles.emptyText}>No results</Text>
+            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
           </View>
         )}
       </ScrollView>
-
-      {/* Refresh Button */}
-      <TouchableOpacity style={styles.refreshButton} onPress={findNearestPlaces}>
-        <Icon name="refresh" size={24} color="#7A8B7F" />
-      </TouchableOpacity>
     </View>
   );
 };
@@ -700,317 +653,237 @@ const MapScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F7F5",
-    paddingTop: 50,
+    backgroundColor: '#F5F2ED',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: "#F9F7F5",
-    padding: 20,
+    backgroundColor: '#F5F2ED',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#7A8B7F',
-    textAlign: 'center',
-    fontFamily: 'System',
-    fontWeight: '500',
-  },
-  loadingSubtext: {
-    marginTop: 8,
+    marginTop: 12,
     fontSize: 14,
-    color: '#8B8B8B',
-    textAlign: 'center',
-    fontFamily: 'System',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: "#F9F7F5",
-    padding: 20,
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#FF6B6B',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'System',
-  },
-  retryButton: {
-    backgroundColor: '#7A8B7F',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'System',
+    color: '#58656E',
+    fontWeight: '400',
   },
   header: {
+    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 16,
+    backgroundColor: '#D8CEB8',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
+    borderBottomColor: '#9BAAAE',
   },
-  headerTop: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    backgroundColor: 'transparent',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'System',
-    flex: 1,
-  },
-  viewMapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7A8B7F',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginLeft: 12,
-  },
-  viewMapButtonText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-    fontFamily: 'System',
+    color: '#3A343C',
+    letterSpacing: -1,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: '#7A8B7F',
-    fontFamily: 'System',
+    fontSize: 14,
+    color: '#58656E',
+    fontWeight: '400',
   },
-  categoryContainer: {
-    backgroundColor: '#FEFDFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
+  mapButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  categoryContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  categoryButton: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9F7F5',
+    backgroundColor: '#F5F2ED',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#3A343C',
+    marginLeft: 8,
+    fontWeight: '400',
+  },
+  categoryRow: {
+    backgroundColor: '#D8CEB8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#9BAAAE',
+  },
+  categoryScroll: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 25,
-    marginRight: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-    minWidth: 120,
   },
-  categoryButtonSelected: {
-    backgroundColor: '#7A8B7F',
-    borderColor: '#7A8B7F',
+  categoryTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F5F2ED',
+    marginRight: 8,
   },
-  categoryText: {
-    marginLeft: 8,
-    fontSize: 14,
+  categoryTabActive: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  categoryTabText: {
+    fontSize: 13,
     fontWeight: '500',
-    color: '#7A8B7F',
-    fontFamily: 'System',
+    color: '#58656E',
   },
-  categoryTextSelected: {
+  categoryTabTextActive: {
+    fontSize: 13,
+    fontWeight: '500',
     color: '#FFF',
   },
-  locationInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FEFDFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5DDD5',
-  },
-  locationText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
-  },
-  placesContainer: {
+  listContainer: {
     flex: 1,
-    padding: 16,
   },
-  placeCard: {
-    backgroundColor: '#FEFDFB',
-    borderRadius: 16,
+  listContent: {
     padding: 20,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingBottom: 100,
   },
-  placeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
-  placeIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  cardHeader: {
+    marginBottom: 12,
   },
-  placeInfo: {
+  cardLeft: {
     flex: 1,
   },
-  nameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  placeName: {
-    fontSize: 18,
+  cardTitle: {
+    fontSize: 17,
     fontWeight: '600',
-    color: '#2C2C2C',
-    fontFamily: 'System',
-    flex: 1,
+    color: '#000',
+    marginBottom: 6,
+    lineHeight: 22,
   },
-  verifiedBadge: {
-    marginLeft: 8,
-  },
-  ratingContainer: {
+  cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  rating: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C2C2C',
-    fontFamily: 'System',
-  },
-  distance: {
-    marginLeft: 12,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontWeight: '500',
-    fontFamily: 'System',
-  },
-  placeDetails: {
-    marginBottom: 16,
-  },
-  areaContainer: {
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 4,
   },
-  placeArea: {
-    marginLeft: 8,
-    fontSize: 14,
+  ratingText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#F59E0B',
+  },
+  divider: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#CCC',
+    marginHorizontal: 8,
+  },
+  distanceText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6366F1',
+  },
+  cardDetails: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  detailText: {
+    fontSize: 13,
     color: '#666',
-    fontFamily: 'System',
-    fontWeight: '500',
+    flex: 1,
+    lineHeight: 18,
   },
-  hoursContainer: {
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  placeHours: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#7A8B7F',
-    fontFamily: 'System',
-  },
-  websiteContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  websiteText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#45B7D1',
-    fontWeight: '500',
-    fontFamily: 'System',
-    textDecorationLine: 'underline',
-  },
-  placeActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: '#F9F7F5',
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
-    flex: 0.48,
-    justifyContent: 'center',
+    gap: 6,
   },
-  directionsButton: {
-    backgroundColor: '#FEFDFB',
-  },
-  actionText: {
-    marginLeft: 8,
+  actionBtnText: {
     fontSize: 14,
-    color: '#7A8B7F',
     fontWeight: '500',
-    fontFamily: 'System',
+    color: '#FFF',
   },
-  noResults: {
+  actionBtnSecondary: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    gap: 6,
+  },
+  actionBtnSecondaryText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6366F1',
+  },
+  emptyState: {
+    alignItems: 'center',
     paddingVertical: 60,
   },
-  noResultsText: {
-    fontSize: 18,
-    color: '#2C2C2C',
-    fontWeight: '500',
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
     marginTop: 16,
     marginBottom: 8,
-    fontFamily: 'System',
-    textAlign: 'center',
   },
-  noResultsSubtext: {
+  emptySubtext: {
     fontSize: 14,
-    color: '#7A8B7F',
-    textAlign: 'center',
-    fontFamily: 'System',
-  },
-  refreshButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FEFDFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1.5,
-    borderColor: '#E5DDD5',
+    color: '#666',
   },
 });
 
