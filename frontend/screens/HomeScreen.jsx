@@ -196,6 +196,12 @@ export default function HomeScreen({ navigation, route }) {
     navigation.navigate("Help", { user })
   }
 
+  // Add this function for Privacy navigation
+  const handleGoToPrivacy = () => {
+    setDrawerVisible(false)
+    navigation.navigate("Privacy", { user })
+  }
+
   const sendMessage = async () => {
     if (!inputMessage.trim()) return
 
@@ -540,7 +546,10 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.drawerItemText}>Settings</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.drawerItem}>
+              <TouchableOpacity 
+                style={styles.drawerItem}
+                onPress={handleGoToPrivacy}
+              >
                 <View style={styles.drawerIconBox}>
                   <Text style={styles.drawerItemIcon}>■</Text>
                 </View>

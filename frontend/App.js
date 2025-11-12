@@ -11,6 +11,8 @@ import MapScreen from "./screens/MapScreen";
 import MiniMapScreen from "./screens/MiniMapScreen";
 import TipsScreen from "./screens/TipsScreen";
 import AboutusScreen from "./screens/AboutusScreen";
+import InstructionScreen from "./screens/InstructionScreen";
+import PrivacyScreen from "./screens/PrivacyScreen";
 
 const Stack = createStackNavigator();
 
@@ -28,6 +30,8 @@ export default function App() {
         <Stack.Screen name="MiniMap" component={MiniMapScreen} />
         <Stack.Screen name="Tips" component={TipsScreen} />
         <Stack.Screen name="Aboutus" component={AboutusScreen} />
+        <Stack.Screen name="Help" component={InstructionScreen} />
+        <Stack.Screen name="Privacy" component={PrivacyScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -19,28 +19,28 @@ const teamMembers = [
     color: "#A36B4F"
   },
   {
-    name: "Jeremiah Estillore",
-    role: "Frontend Developer & Documentation",
-    image: require("../assets/image1.jpg"),
-    bio: "Jeremiah focused on the app's design and user interface, making sure it was clean, responsive, and user-friendly. He also assisted in documentation.",
-    icon: "layout",
-    color: "#58656E"
+    name: "Crisha Arlene Antonio",
+    role: "Documentation",
+    image: require("../assets/image3.jpg"),
+    bio: "Crisha Arlene contributed greatly to writing and editing the project documentation. Her attention to detail and teamwork helped maintain the project's quality.",
+    icon: "edit-3",
+    color: "#6366F1"
   },
   {
     name: "Hannah Mae Bernolia",
-    role: "Documentation Leader",
+    role: "Documentation",
     image: require("../assets/image1.jpg"),
     bio: "Hannah Mae led the documentation team with consistency and structure. She ensured that the research papers, reports, and written outputs were accurate and clear.",
     icon: "file-text",
     color: "#9BAAAE"
   },
   {
-    name: "Crisha Arlene Antonio",
-    role: "Documentation Leader",
-    image: require("../assets/image1.jpg"),
-    bio: "Crisha Arlene contributed greatly to writing and editing the project documentation. Her attention to detail and teamwork helped maintain the project's quality.",
-    icon: "edit-3",
-    color: "#6366F1"
+    name: "Jeremiah Estillore",
+    role: "Frontend Developer & Documentation",
+    image: require("../assets/image4.jpg"),
+    bio: "Jeremiah focused on the app's design and user interface, making sure it was clean, responsive, and user-friendly. He also assisted in documentation.",
+    icon: "layout",
+    color: "#58656E"
   },
 ]
 
@@ -154,7 +154,7 @@ const AboutUsScreen = () => {
                   <View style={styles.imageWrapper}>
                     <Image source={member.image} style={styles.memberImage} resizeMode="cover" />
                     <View style={styles.memberBadge}>
-                      <Feather name={member.icon} size={14} color="#FFF" />
+                      <Feather name={member.icon} size={16} color="#FFF" />
                     </View>
                   </View>
                   <View style={styles.memberInfo}>
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   memberCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
-    marginBottom: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#F0F0F0',
     overflow: 'hidden',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   memberHeader: {
-    padding: 16,
+    padding: 20,
   },
   memberTop: {
     flexDirection: 'row',
@@ -366,49 +366,54 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: 20,
   },
   memberImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   memberBadge: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFF',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   memberRole: {
-    fontSize: 13,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
   memberBioContainer: {
-    padding: 16,
+    padding: 20,
   },
   memberBio: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#58656E',
-    lineHeight: 20,
+    lineHeight: 22,
     fontWeight: '400',
   },
   quoteCard: {
