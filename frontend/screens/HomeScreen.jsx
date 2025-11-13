@@ -23,6 +23,9 @@ export default function HomeScreen({ navigation, route }) {
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  // Logout confirmation modal state
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+
   // Pulse animation for chat button
   const pulseAnim = useRef(new Animated.Value(1)).current
   // Pulse animation for drawer button
@@ -124,8 +127,14 @@ export default function HomeScreen({ navigation, route }) {
     }
   }, [isChatVisible])
 
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(true)
+    setDrawerVisible(false)
+  }
+
   const handleLogout = async () => {
     try {
+      setShowLogoutModal(false)
       await AsyncStorage.removeItem("user")
       await AsyncStorage.removeItem("token")
       navigation.replace("Login")
@@ -133,6 +142,10 @@ export default function HomeScreen({ navigation, route }) {
       console.error("Error during logout:", error)
       navigation.replace("Login")
     }
+  }
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false)
   }
 
   const handleGoToProfile = () => {
@@ -581,7 +594,7 @@ export default function HomeScreen({ navigation, route }) {
 
               <TouchableOpacity 
                 style={[styles.drawerItem, styles.drawerItemDanger]}
-                onPress={handleLogout}
+                onPress={handleLogoutConfirm}
               >
                 <View style={styles.drawerIconBox}>
                   <Text style={styles.drawerItemIcon}>▲</Text>
@@ -592,6 +605,53 @@ export default function HomeScreen({ navigation, route }) {
           </Animated.View>
         </TouchableOpacity>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <View style={styles.logoutModalContent}>
+            <LinearGradient
+              colors={['#FFFFFF', '#F8F9F7']}
+              style={styles.logoutModalGradient}
+            >
+              <View style={styles.logoutModalHeader}>
+                <Text style={styles.logoutModalTitle}>Sign Out</Text>
+                <Text style={styles.logoutModalSubtitle}>
+                  Are you sure you want to sign out?
+                </Text>
+              </View>
+
+              <View style={styles.logoutModalActions}>
+                <TouchableOpacity 
+                  style={[styles.logoutModalButton, styles.cancelButton]}
+                  onPress={cancelLogout}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.logoutModalButton, styles.confirmButton]}
+                  onPress={handleLogout}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#F44336', '#E53935']}
+                    style={styles.confirmButtonGradient}
+                  >
+                    <Text style={styles.confirmButtonText}>Yes, Sign Out</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
 
       {/* Floating Chat Button with Pulse */}
       <Animated.View style={[styles.chatButtonContainer, { transform: [{ scale: pulseAnim }] }]}>
@@ -1146,6 +1206,91 @@ const styles = StyleSheet.create({
   },
   drawerItemDangerText: {
     color: '#F44336',
+    fontFamily: 'System',
+  },
+  
+  // Logout Confirmation Modal
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logoutModalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  logoutModalGradient: {
+    padding: 24,
+  },
+  logoutModalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  logoutModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#A36B4F',
+    marginBottom: 8,
+    fontFamily: 'System',
+  },
+  logoutModalSubtitle: {
+    fontSize: 16,
+    color: '#58656E',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: 'System',
+  },
+  logoutModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  logoutModalButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  cancelButton: {
+    backgroundColor: '#F8F9F7',
+    borderWidth: 1,
+    borderColor: '#E8EBE6',
+  },
+  confirmButton: {
+    shadowColor: '#F44336',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  confirmButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#58656E',
+    textAlign: 'center',
+    lineHeight: 48,
+    fontFamily: 'System',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    textAlign: 'center',
     fontFamily: 'System',
   },
   
