@@ -13,7 +13,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { PYTHON_API_URL, API_URL } from "../config/api";
+import { API_URL } from "../config/api";
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Color Theme
@@ -111,7 +111,7 @@ export default function SkincareScreen({ navigation }) {
 
   // Enhanced error handling
   const handleAnalysisError = (error) => {
-    const message = error.response?.data?.detail || error.message;
+    const message = error.response?.data?.error || error.message;
     
     if (message.includes("No face detected")) {
       Alert.alert(
@@ -141,7 +141,7 @@ export default function SkincareScreen({ navigation }) {
     }
   };
 
-  // Enhanced analysis function
+  // Enhanced analysis function using Node.js endpoint
   const analyzeImage = async () => {
     if (!image) {
       Alert.alert("No Image", "Please select or capture a clear face photo first.");
@@ -150,6 +150,8 @@ export default function SkincareScreen({ navigation }) {
 
     try {
       setLoading(true);
+      
+      // Create FormData for the image
       const formData = new FormData();
       formData.append("file", {
         uri: image,
@@ -157,10 +159,13 @@ export default function SkincareScreen({ navigation }) {
         type: "image/jpeg",
       });
 
-      console.log("Analyzing new image...");
+      console.log("Analyzing new image with Node.js endpoint...");
 
-      const res = await axios.post(`${PYTHON_API_URL}/analyze/skin`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      // Use the Node.js endpoint instead of Python
+      const res = await axios.post(`${API_URL}/api/face/analyze/skin`, formData, {
+        headers: { 
+          "Content-Type": "multipart/form-data",
+        },
         timeout: 30000,
       });
 
@@ -202,6 +207,7 @@ export default function SkincareScreen({ navigation }) {
         analysisData: result,
         skinGrade: result.skin_grade,
         overallCondition: result.overall_condition,
+        timestamp: new Date().toISOString(),
       };
 
       const response = await axios.post(`${API_URL}/api/history/save-analysis`, analysisData);
@@ -447,12 +453,6 @@ export default function SkincareScreen({ navigation }) {
                 label="Acne Severity"
                 value={result.acne}
                 icon="🫒"
-              />
-
-              <LevelBar
-                label="Pimples"
-                value={result.pimples}
-                icon="🔴"
               />
 
               <LevelBar
