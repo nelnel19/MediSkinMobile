@@ -29,7 +29,7 @@ const COLORS = {
 };
 
 // 🔴 CHANGE THIS TO YOUR PC IP
-const API_URL = "http://192.168.1.26:8000";
+const API_URL = "http://10.219.12.186:8000";
 
 export default function SkinDiseaseScreen({ navigation }) {
   const [image, setImage] = useState(null);
@@ -38,6 +38,142 @@ export default function SkinDiseaseScreen({ navigation }) {
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorDetails, setErrorDetails] = useState("");
+
+  // Medications List Component
+  const MedicationsList = ({ medications, generalAdvice }) => {
+    const [expandedCategory, setExpandedCategory] = useState(null);
+    
+    return (
+      <View style={styles.medicationsSection}>
+        <View style={styles.medicationsHeader}>
+          <Icon name="medical-services" size={22} color={COLORS.accent} />
+          <Text style={styles.medicationsTitle}>Recommended Treatments</Text>
+        </View>
+        
+        {medications && medications.map((medication, index) => (
+          <View key={index} style={styles.medicationCategory}>
+            <TouchableOpacity
+              style={styles.categoryHeader}
+              onPress={() => setExpandedCategory(expandedCategory === index ? null : index)}
+            >
+              <View style={styles.categoryTitleContainer}>
+                <Icon name="category" size={18} color={COLORS.primary} />
+                <Text style={styles.categoryTitle}>{medication.category}</Text>
+              </View>
+              <Icon 
+                name={expandedCategory === index ? "expand-less" : "expand-more"} 
+                size={24} 
+                color={COLORS.secondary} 
+              />
+            </TouchableOpacity>
+            
+            {expandedCategory === index && (
+              <View style={styles.categoryContent}>
+                <Text style={styles.categoryDescription}>{medication.description}</Text>
+                <View style={styles.medicationItems}>
+                  {medication.items.map((item, itemIndex) => (
+                    <View key={itemIndex} style={styles.medicationItem}>
+                      <Icon name="check-circle" size={16} color={COLORS.success} />
+                      <Text style={styles.medicationItemText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        ))}
+        
+        {generalAdvice && generalAdvice.length > 0 && (
+          <View style={styles.generalAdviceSection}>
+            <View style={styles.generalAdviceHeader}>
+              <Icon name="tips-and-updates" size={20} color={COLORS.accent} />
+              <Text style={styles.generalAdviceTitle}>Self-Care Tips</Text>
+            </View>
+            {generalAdvice.map((advice, index) => (
+              <View key={index} style={styles.adviceItem}>
+                <Icon name="fiber-manual-record" size={8} color={COLORS.accent} />
+                <Text style={styles.adviceText}>{advice}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Disease Card Component with confidence warnings and medications
+  const DiseaseCard = ({ disease, confidence, description, warning, medicationInfo }) => {
+    let severityColor = COLORS.success;
+    let confidenceLevel = "High";
+    
+    if (confidence >= 70) {
+      severityColor = COLORS.success;
+      confidenceLevel = "High";
+    } else if (confidence >= 45) {
+      severityColor = COLORS.info;
+      confidenceLevel = "Medium";
+    } else {
+      severityColor = COLORS.error;
+      confidenceLevel = "Low";
+    }
+    
+    return (
+      <View style={styles.diseaseCard}>
+        <View style={styles.diseaseHeader}>
+          <Icon name={confidence >= 70 ? "verified" : "warning"} size={24} color={severityColor} />
+          <View style={styles.diseaseTitleContainer}>
+            <Text style={styles.diseaseTitle}>{disease.replace(/_/g, ' ')}</Text>
+            <View style={[styles.confidenceBadge, { backgroundColor: `${severityColor}20` }]}>
+              <Text style={[styles.confidenceText, { color: severityColor }]}>
+                {confidence}% confidence ({confidenceLevel})
+              </Text>
+            </View>
+          </View>
+        </View>
+        
+        <View style={styles.confidenceBar}>
+          <View style={[
+            styles.confidenceFill,
+            { 
+              width: `${confidence}%`,
+              backgroundColor: severityColor
+            }
+          ]} />
+          <View style={[styles.thresholdMarker, { left: '45%' }]}>
+            <Text style={styles.thresholdText}>45%</Text>
+          </View>
+          <View style={[styles.thresholdMarker, { left: '70%' }]}>
+            <Text style={styles.thresholdText}>70%</Text>
+          </View>
+        </View>
+        
+        {warning && (
+          <View style={styles.warningBox}>
+            <Icon name="warning" size={16} color={COLORS.warning} />
+            <Text style={styles.warningText}>{warning}</Text>
+          </View>
+        )}
+        
+        {description && (
+          <View style={styles.descriptionBox}>
+            <View style={styles.descriptionHeader}>
+              <Icon name="info" size={18} color={COLORS.primary} />
+              <Text style={styles.descriptionTitle}>Description</Text>
+            </View>
+            <Text style={styles.descriptionText}>{description}</Text>
+          </View>
+        )}
+        
+        {/* Medications Section */}
+        {medicationInfo && medicationInfo.has_medications && (
+          <MedicationsList 
+            medications={medicationInfo.medications}
+            generalAdvice={medicationInfo.general_advice}
+          />
+        )}
+      </View>
+    );
+  };
 
   // ORIGINAL FUNCTIONALITY - KEPT AS IS
   const requestPermissions = async () => {
@@ -128,10 +264,8 @@ export default function SkinDiseaseScreen({ navigation }) {
       const responseData = await response.json();
 
       if (!response.ok) {
-        // Handle backend errors (400 or 500)
         if (responseData.detail) {
           if (typeof responseData.detail === 'object') {
-            // Structured error from backend
             if (responseData.detail.error === "LOW_CONFIDENCE") {
               setErrorMessage(responseData.detail.message || "Low confidence prediction");
               setErrorDetails(responseData.detail.details || "This might not be skin or doesn't match trained conditions.");
@@ -140,7 +274,6 @@ export default function SkinDiseaseScreen({ navigation }) {
               setErrorDetails(responseData.detail.details || "");
             }
           } else {
-            // Simple string error
             setErrorMessage(responseData.detail);
             setErrorDetails("");
           }
@@ -154,9 +287,7 @@ export default function SkinDiseaseScreen({ navigation }) {
 
       // Successful response
       if (responseData.disease && responseData.confidence) {
-        // Check if there's a warning (medium confidence)
         if (responseData.warning) {
-          // Show warning but still display result
           setResult(responseData);
           Alert.alert(
             "Medium Confidence",
@@ -174,7 +305,6 @@ export default function SkinDiseaseScreen({ navigation }) {
     } catch (error) {
       console.error("Analysis error:", error);
       
-      // Network errors or other exceptions
       if (error.message.includes("Network request failed") || 
           error.message.includes("fetch")) {
         Alert.alert(
@@ -258,7 +388,6 @@ export default function SkinDiseaseScreen({ navigation }) {
               style={styles.modalPrimaryButton}
               onPress={() => {
                 setShowRetakeModal(false);
-                // Open camera for retake
                 takePhotoWithCamera();
               }}
             >
@@ -270,73 +399,6 @@ export default function SkinDiseaseScreen({ navigation }) {
       </View>
     </Modal>
   );
-
-  // Disease Card Component with confidence warnings
-  const DiseaseCard = ({ disease, confidence, description, warning }) => {
-    let severityColor = COLORS.success;
-    let confidenceLevel = "High";
-    
-    if (confidence >= 70) {
-      severityColor = COLORS.success;
-      confidenceLevel = "High";
-    } else if (confidence >= 45) {
-      severityColor = COLORS.info;
-      confidenceLevel = "Medium";
-    } else {
-      severityColor = COLORS.error;
-      confidenceLevel = "Low";
-    }
-    
-    return (
-      <View style={styles.diseaseCard}>
-        <View style={styles.diseaseHeader}>
-          <Icon name={confidence >= 70 ? "verified" : "warning"} size={24} color={severityColor} />
-          <View style={styles.diseaseTitleContainer}>
-            <Text style={styles.diseaseTitle}>{disease.replace(/_/g, ' ')}</Text>
-            <View style={[styles.confidenceBadge, { backgroundColor: `${severityColor}20` }]}>
-              <Text style={[styles.confidenceText, { color: severityColor }]}>
-                {confidence}% confidence ({confidenceLevel})
-              </Text>
-            </View>
-          </View>
-        </View>
-        
-        <View style={styles.confidenceBar}>
-          <View style={[
-            styles.confidenceFill,
-            { 
-              width: `${confidence}%`,
-              backgroundColor: severityColor
-            }
-          ]} />
-          {/* Threshold markers */}
-          <View style={[styles.thresholdMarker, { left: '45%' }]}>
-            <Text style={styles.thresholdText}>45%</Text>
-          </View>
-          <View style={[styles.thresholdMarker, { left: '70%' }]}>
-            <Text style={styles.thresholdText}>70%</Text>
-          </View>
-        </View>
-        
-        {warning && (
-          <View style={styles.warningBox}>
-            <Icon name="warning" size={16} color={COLORS.warning} />
-            <Text style={styles.warningText}>{warning}</Text>
-          </View>
-        )}
-        
-        {description && (
-          <View style={styles.descriptionBox}>
-            <View style={styles.descriptionHeader}>
-              <Icon name="info" size={18} color={COLORS.primary} />
-              <Text style={styles.descriptionTitle}>Description</Text>
-            </View>
-            <Text style={styles.descriptionText}>{description}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -433,7 +495,7 @@ export default function SkinDiseaseScreen({ navigation }) {
           </View>
         )}
 
-        {/* Results Section - New Design */}
+        {/* Results Section - New Design with Medications */}
         {result && (
           <View style={styles.resultsSection}>
             <View style={styles.resultHeader}>
@@ -458,12 +520,13 @@ export default function SkinDiseaseScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Disease Card */}
+            {/* Disease Card with Medications */}
             <DiseaseCard 
               disease={result.disease}
               confidence={result.confidence}
               description={result.description}
               warning={result.warning}
+              medicationInfo={result.medication_info}
             />
 
             {/* Action Buttons - New Design */}
@@ -481,8 +544,7 @@ export default function SkinDiseaseScreen({ navigation }) {
             <View style={styles.disclaimerBox}>
               <Icon name="medical-services" size={18} color={COLORS.secondary} />
               <Text style={styles.disclaimerText}>
-                Disclaimer: This is a predictive analysis only.
-                Always consult a healthcare professional.
+                Disclaimer: This is a predictive analysis only. Always consult a healthcare professional.
               </Text>
             </View>
           </View>
@@ -492,10 +554,6 @@ export default function SkinDiseaseScreen({ navigation }) {
         {!image && !result && !loading && (
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsTitle}>Important Notes:</Text>
-            <View style={styles.instructionItem}>
-            </View>
-            <View style={styles.instructionItem}>
-            </View>
             <View style={styles.instructionItem}>
               <Icon name="check-circle" size={16} color={COLORS.success} />
               <Text style={styles.instructionText}>Only trained for specific skin conditions</Text>
@@ -507,6 +565,10 @@ export default function SkinDiseaseScreen({ navigation }) {
             <View style={styles.instructionItem}>
               <Icon name="verified" size={16} color={COLORS.success} />
               <Text style={styles.instructionText}>70%+ = High confidence</Text>
+            </View>
+            <View style={styles.instructionItem}>
+              <Icon name="verified" size={16} color={COLORS.success} />
+              <Text style={styles.instructionText}>Includes treatment recommendations for each condition</Text>
             </View>
           </View>
         )}
@@ -810,6 +872,105 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: 13,
     color: COLORS.secondary,
+    lineHeight: 18,
+  },
+  // Medications Section Styles
+  medicationsSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(88, 101, 110, 0.2)',
+  },
+  medicationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  medicationsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginLeft: 8,
+  },
+  medicationCategory: {
+    backgroundColor: 'rgba(58, 52, 60, 0.03)',
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    backgroundColor: 'rgba(58, 52, 60, 0.05)',
+  },
+  categoryTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  categoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginLeft: 10,
+    flex: 1,
+  },
+  categoryContent: {
+    padding: 14,
+  },
+  categoryDescription: {
+    fontSize: 13,
+    color: COLORS.secondary,
+    marginBottom: 10,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  medicationItems: {
+    marginTop: 8,
+  },
+  medicationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  medicationItemText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 20,
+  },
+  generalAdviceSection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: 'rgba(163, 107, 79, 0.08)',
+    borderRadius: 12,
+  },
+  generalAdviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  generalAdviceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.accent,
+    marginLeft: 8,
+  },
+  adviceItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    paddingRight: 8,
+  },
+  adviceText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    marginLeft: 10,
+    flex: 1,
     lineHeight: 18,
   },
   // Action Buttons

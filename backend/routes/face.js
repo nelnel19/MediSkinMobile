@@ -29,7 +29,6 @@ function generateSkincareRecommendations(skinData) {
   const acneScore = skinData.acne || 0;
   const stain = skinData.skin_attributes?.stain || 0;
   const darkCircle = skinData.skin_attributes?.dark_circle || 0;
-  const blackhead = skinData.skin_attributes?.blackhead || 0;
   const age = parseInt(skinData.age) || 25;
   
   // Determine skin issues
@@ -37,9 +36,7 @@ function generateSkincareRecommendations(skinData) {
   const hasSevereAcne = acneScore > 60;
   const hasStains = stain > 40;
   const hasDarkCircles = darkCircle > 40;
-  const hasBlackheads = blackhead > 30;
   const isMatureSkin = age > 35;
-  const isYoungSkin = age < 25;
   
   // Morning Routine
   const morningRoutine = [];
@@ -82,17 +79,14 @@ function generateSkincareRecommendations(skinData) {
   // Weekly Treatments
   const weeklyTreatments = [];
   
-  if (hasAcne || hasBlackheads) {
+  if (hasAcne) {
     weeklyTreatments.push("Chemical exfoliation 2-3 times weekly (AHA/BHA)");
+    weeklyTreatments.push("Clay mask to absorb excess oil");
+    recommendations.push("Avoid touching your face to prevent breakouts");
   }
   
   if (hasStains) {
     weeklyTreatments.push("Weekly brightening mask with vitamin C");
-  }
-  
-  if (hasBlackheads) {
-    weeklyTreatments.push("Clay mask to absorb excess oil");
-    recommendations.push("Avoid touching your face to prevent blackheads");
   }
   
   if (!hasAcne && !hasStains) {
@@ -137,6 +131,30 @@ function generateSkincareRecommendations(skinData) {
   };
 }
 
+// Function to map Face++ skin tone value (0-4) to readable format
+function mapSkinTone(toneValue) {
+  // Face++ skin tone values:
+  // 0: Fair / Light
+  // 1: Natural / Medium
+  // 2: Wheat / Slight tan
+  // 3: Tanned / Bronze
+  // 4: Darker skin tones
+  
+  const toneMap = {
+    0: { value: 0, name: "Fair / Light", description: "Fair skin that burns easily", hex: "#F8E8D0" },
+    1: { value: 1, name: "Natural / Medium", description: "Medium skin that tans gradually", hex: "#E0C8A8" },
+    2: { value: 2, name: "Wheat / Slight tan", description: "Wheatish complexion, tans easily", hex: "#C8A880" },
+    3: { value: 3, name: "Tanned / Bronze", description: "Tanned skin, rarely burns", hex: "#A88060" },
+    4: { value: 4, name: "Darker skin tones", description: "Dark skin, never burns", hex: "#806040" }
+  };
+  
+  // Ensure toneValue is a number between 0-4
+  const tone = typeof toneValue === 'number' ? toneValue : parseInt(toneValue) || 1;
+  const validTone = Math.max(0, Math.min(4, tone));
+  
+  return toneMap[validTone] || toneMap[1];
+}
+
 // Main analysis endpoint - USING REAL FACE++ API
 router.post('/analyze/skin', upload.single('file'), async (req, res) => {
   try {
@@ -170,14 +188,14 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
     console.log('API Secret configured:', !!FACEPP_API_SECRET);
     
     try {
-      // Call Face++ API with minimal attributes to avoid errors
+      // Call Face++ API with skin attributes
       console.log('Calling Face++ API with skin attributes...');
       
       const formData = new FormData();
       formData.append('api_key', FACEPP_API_KEY || '');
       formData.append('api_secret', FACEPP_API_SECRET || '');
       
-      // Only request attributes that actually work
+      // Request all available attributes including skin tone
       formData.append('return_attributes', 'gender,age,skinstatus,facequality,blur');
       
       formData.append('image_file', imgBuffer, {
@@ -196,7 +214,7 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
 
       const apiResult = response.data;
 
-      // CRITICAL: Check if face is detected
+      // Check if face is detected
       if (!apiResult.faces || apiResult.faces.length === 0) {
         console.log('❌ No face detected in the image');
         return res.status(400).json({ 
@@ -210,36 +228,46 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
       const attrs = faceData.attributes || {};
       
       console.log('Face++ Raw Response Received - Face detected');
+      console.log('Skinstatus data:', JSON.stringify(attrs.skinstatus, null, 2));
       
-      // EXTRACT DATA FROM FACE++
+      // Extract data from Face++
+      // Face++ provides skin tone as a numeric value (0-4)
+      const rawSkinTone = attrs.skinstatus?.skin_tone;
+      const skinToneValue = typeof rawSkinTone === 'number' ? rawSkinTone : 
+                           (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
+      
       const skinAttributes = {
         stain: attrs.skinstatus?.stain || 0,
         dark_circle: attrs.skinstatus?.dark_circle || 0,
         acne: attrs.skinstatus?.acne || 0,
-        blackhead: attrs.skinstatus?.blackhead || 0,
+        // Blackhead removed - not accurately provided by Face++
+        skin_tone: {
+          raw_value: skinToneValue,
+          ...mapSkinTone(skinToneValue)
+        }
       };
       
       const result = {
-        // 1. Age (Face++ provides this directly)
+        // Age
         age: attrs.age?.value || "Unknown",
         
-        // 2. Gender (Face++ provides this directly)
+        // Gender
         gender: attrs.gender?.value || "Unknown",
         
-        // 3. Skin status attributes
+        // Skin status
         acne: skinAttributes.acne,
         
-        // 4. Skin attributes
+        // Skin attributes including skin tone from Face++
         skin_attributes: skinAttributes,
         
-        // 5. IMAGE QUALITY
+        // Image quality
         image_quality: {
           blur: attrs.blur?.blurness?.value || 0,
           face_quality: attrs.facequality?.value || 0,
           passed: (attrs.facequality?.value || 0) > 50 && (attrs.blur?.blurness?.value || 100) < 50
         },
         
-        // 6. Generate personalized skincare recommendations
+        // Skincare recommendations
         skincare_recommendations: generateSkincareRecommendations({
           acne: skinAttributes.acne,
           skin_attributes: skinAttributes,
@@ -251,7 +279,7 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
         face_count: apiResult.faces.length,
         api_used: "Face++ (Skin Analysis)",
         face_detected: true,
-        face_confidence: 0.85 + Math.random() * 0.15
+        face_confidence: faceData.confidence || 0.9
       };
 
       // Cache result
@@ -263,6 +291,7 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
       console.log(`✓ Real Face++ Analysis Complete:`);
       console.log(`  Age: ${result.age}, Gender: ${result.gender}`);
       console.log(`  Acne Score: ${result.acne}`);
+      console.log(`  Skin Tone: ${result.skin_attributes.skin_tone.name} (${result.skin_attributes.skin_tone.raw_value})`);
       console.log(`  Face Detected: Yes`);
       
       res.json(result);
@@ -270,7 +299,6 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
     } catch (apiError) {
       console.error('Face++ API Error:', apiError.message);
       
-      // Check if it's a no face error
       if (apiError.response?.data?.error_message?.includes('NO_FACE_DETECTED') || 
           apiError.message.includes('No face')) {
         return res.status(400).json({ 
@@ -280,7 +308,6 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
         });
       }
       
-      // For other API errors, don't proceed with fallback for non-face images
       console.error('API Error Details:', apiError.response?.data);
       
       return res.status(400).json({ 
@@ -317,7 +344,7 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
     formData.append('api_key', FACEPP_API_KEY || '');
     formData.append('api_secret', FACEPP_API_SECRET || '');
     
-    formData.append('return_attributes', 'gender,age');
+    formData.append('return_attributes', 'gender,age,skinstatus');
     
     formData.append('image_file', imgBuffer, {
       filename: `face_${timestamp}.jpg`,
@@ -331,7 +358,6 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
 
     const apiResult = response.data;
     
-    // Check for face detection
     if (!apiResult.faces || apiResult.faces.length === 0) {
       return res.status(400).json({ 
         error: "NO_FACE_DETECTED",
@@ -342,33 +368,39 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
     const faceData = apiResult.faces[0];
     const attrs = faceData.attributes || {};
     
-    const fallbackData = {
-      acne: Math.floor(Math.random() * 50),
-      skin_attributes: {
-        stain: Math.floor(Math.random() * 50),
-        dark_circle: Math.floor(Math.random() * 60),
-        acne: Math.floor(Math.random() * 50),
-        blackhead: Math.floor(Math.random() * 30),
-      },
-      age: attrs.age?.value || "30"
+    const rawSkinTone = attrs.skinstatus?.skin_tone;
+    const skinToneValue = typeof rawSkinTone === 'number' ? rawSkinTone : 
+                         (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
+    
+    const skinAttributes = {
+      stain: attrs.skinstatus?.stain || 0,
+      dark_circle: attrs.skinstatus?.dark_circle || 0,
+      acne: attrs.skinstatus?.acne || 0,
+      // Blackhead removed
+      skin_tone: {
+        raw_value: skinToneValue,
+        ...mapSkinTone(skinToneValue)
+      }
     };
     
     const result = {
       age: attrs.age?.value || "Unknown",
       gender: attrs.gender?.value || "Unknown",
-      acne: fallbackData.acne,
-      skin_attributes: fallbackData.skin_attributes,
+      acne: skinAttributes.acne,
+      skin_attributes: skinAttributes,
       image_quality: { 
-        passed: true,
-        blur: 10,
-        face_quality: 75
+        passed: true
       },
-      skincare_recommendations: generateSkincareRecommendations(fallbackData),
+      skincare_recommendations: generateSkincareRecommendations({
+        acne: skinAttributes.acne,
+        skin_attributes: skinAttributes,
+        age: attrs.age?.value || 25
+      }),
       timestamp: timestamp,
       face_count: apiResult.faces.length,
       api_used: "Face++ (Basic)",
       face_detected: true,
-      face_confidence: 0.9
+      face_confidence: faceData.confidence || 0.9
     };
     
     res.json(result);
@@ -376,7 +408,6 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Basic Analysis Error:', error.message);
     
-    // Don't provide fallback for non-face images
     return res.status(400).json({ 
       error: "ANALYSIS_FAILED",
       message: "Unable to analyze the image. Please ensure it contains a clear face.",
@@ -385,7 +416,7 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
   }
 });
 
-// TEST ENDPOINT (for debugging - with face detection check)
+// TEST ENDPOINT
 router.post('/analyze/test', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -394,50 +425,42 @@ router.post('/analyze/test', upload.single('file'), async (req, res) => {
 
     const timestamp = Date.now();
     
-    // Simulate face detection check first
-    console.log('Testing image for face detection...');
-    
-    // In a real test, we would check for face
-    // For now, we'll simulate it
-    const hasFace = Math.random() > 0.3; // 70% chance of "detecting" face
-    
-    if (!hasFace) {
-      return res.status(400).json({ 
-        error: "NO_FACE_DETECTED",
-        message: "No face detected in test mode. Please use a photo with a clear face."
-      });
-    }
-    
-    const age = Math.floor(Math.random() * 50) + 18;
-    const acne = Math.floor(Math.random() * 80);
-    const testData = {
-      acne: acne,
-      skin_attributes: {
-        stain: Math.floor(Math.random() * 70),
-        dark_circle: Math.floor(Math.random() * 80),
-        acne: acne,
-        blackhead: Math.floor(Math.random() * 50),
-      },
-      age: age.toString()
-    };
-    
-    // Test response with realistic data and recommendations
     const testResult = {
-      age: age.toString(),
-      gender: Math.random() > 0.5 ? "Male" : "Female",
-      acne: acne,
-      skin_attributes: testData.skin_attributes,
+      age: "28",
+      gender: "Female",
+      acne: 45,
+      skin_attributes: {
+        stain: 35,
+        dark_circle: 42,
+        acne: 45,
+        // Blackhead removed
+        skin_tone: {
+          raw_value: 2,
+          value: 2,
+          name: "Wheat / Slight tan",
+          description: "Wheatish complexion, tans easily",
+          hex: "#C8A880"
+        }
+      },
       image_quality: {
-        blur: Math.floor(Math.random() * 30),
-        face_quality: 70 + Math.floor(Math.random() * 30),
+        blur: 15,
+        face_quality: 85,
         passed: true,
       },
-      skincare_recommendations: generateSkincareRecommendations(testData),
+      skincare_recommendations: {
+        summary: "Your skin shows moderate acne concerns with some pigmentation",
+        morning_routine: ["Gentle cleanser", "Vitamin C serum", "SPF 30+ moisturizer"],
+        evening_routine: ["Double cleanse", "Salicylic acid treatment", "Hydrating night cream"],
+        weekly_treatments: ["Chemical exfoliation 2x weekly", "Clay mask 1x weekly"],
+        lifestyle_tips: ["Drink 8 glasses of water", "Reduce sugar intake", "Change pillowcases twice weekly"],
+        key_recommendations: ["Consider niacinamide for pigmentation"],
+        severity: { acne: "moderate", pigmentation: "moderate", aging: "maintenance" }
+      },
       timestamp: timestamp,
       face_count: 1,
       api_used: "Test Data",
       face_detected: true,
-      face_confidence: 0.8 + Math.random() * 0.2,
+      face_confidence: 0.95,
       note: "This is test data for debugging purposes."
     };
     
@@ -452,7 +475,7 @@ router.post('/analyze/test', upload.single('file'), async (req, res) => {
   }
 });
 
-// Enhanced API test
+// API test
 router.get('/test-api', async (req, res) => {
   try {
     console.log('Testing Face++ API connection...');
@@ -466,11 +489,9 @@ router.get('/test-api', async (req, res) => {
       });
     }
     
-    // Try a simple test with Face++
     const formData = new FormData();
     formData.append('api_key', FACEPP_API_KEY);
     formData.append('api_secret', FACEPP_API_SECRET);
-    
     formData.append('image_url', 'https://faceplusplus.com/static/img/demo/9.jpg');
     
     const response = await axios.post('https://api-us.faceplusplus.com/facepp/v3/detect', formData, {
@@ -518,7 +539,6 @@ router.get('/health', (req, res) => {
     cache_size: sessionCache.size,
     api_key_configured: !!FACEPP_API_KEY,
     api_secret_configured: !!FACEPP_API_SECRET,
-    api_version: "v6.0 with face detection",
     endpoints: [
       "POST /analyze/skin - Face analysis with skincare recommendations",
       "POST /analyze/basic - Basic analysis with recommendations",
