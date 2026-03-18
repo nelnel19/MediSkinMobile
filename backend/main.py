@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 import tensorflow as tf
 import numpy as np
@@ -6,6 +6,9 @@ from PIL import Image
 import io
 import os
 import logging
+import tempfile
+from datetime import datetime
+from database import save_skin_analysis_to_history, get_user_skin_history, delete_skin_history_entry  
 
 # =========================
 # LOGGING SETUP
@@ -539,7 +542,7 @@ def preprocess_image(image: Image.Image):
     return image
 
 # =========================
-# PREDICTION ENDPOINT
+# PREDICTION ENDPOINT (Original - kept for backward compatibility)
 # =========================
 @app.post("/predict-skin")
 async def predict_skin(file: UploadFile = File(...)):
@@ -625,6 +628,169 @@ async def predict_skin(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 # =========================
+# PREDICTION ENDPOINT (Without history - for initial analysis)
+# =========================
+@app.post("/predict-skin-only")
+async def predict_skin_only(file: UploadFile = File(...)):
+    """
+    Predict skin disease without saving to history
+    Returns only the prediction result
+    """
+    try:
+        # Read and validate image
+        image_bytes = await file.read()
+        if len(image_bytes) == 0:
+            raise HTTPException(status_code=400, detail="Empty image file")
+        
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        
+        # Basic image validation
+        if image.size[0] < 50 or image.size[1] < 50:
+            raise HTTPException(status_code=400, detail="Image is too small. Please use a clearer photo.")
+        
+        # Check if image is mostly a single color (likely not skin)
+        img_array = np.array(image)
+        unique_colors = len(np.unique(img_array.reshape(-1, img_array.shape[2]), axis=0))
+        if unique_colors < 10:
+            raise HTTPException(status_code=400, detail="Image appears too simple or uniform. Please capture actual skin.")
+        
+        processed_image = preprocess_image(image)
+
+        # Make prediction
+        predictions = model.predict(processed_image, verbose=0)
+        class_index = int(np.argmax(predictions))
+        confidence = float(predictions[0][class_index])
+        
+        # Get class name and description
+        disease_name = CLASS_NAMES[class_index]
+        description = DISEASE_DESCRIPTIONS.get(disease_name, "No description available")
+        
+        # Get medication recommendations
+        medication_info = format_medications_for_response(disease_name)
+        
+        # Log prediction details for debugging
+        logger.info(f"Prediction (no history): {disease_name} with {confidence*100:.1f}% confidence")
+        
+        # Check confidence levels
+        if confidence < LOW_CONFIDENCE_THRESHOLD:
+            # Very low confidence - likely not skin or not matching any trained class
+            second_best_index = np.argsort(predictions[0])[-2] if len(predictions[0]) > 1 else class_index
+            second_best_confidence = float(predictions[0][second_best_index])
+            
+            error_detail = {
+                "error": "LOW_CONFIDENCE",
+                "message": f"The AI is not confident this is a skin condition (confidence: {confidence*100:.1f}%).",
+                "details": "This might not be skin, or it doesn't match any of the trained conditions.",
+                "top_prediction": disease_name,
+                "top_confidence": round(confidence * 100, 2),
+                "second_prediction": CLASS_NAMES[second_best_index],
+                "second_confidence": round(second_best_confidence * 100, 2),
+                "threshold": LOW_CONFIDENCE_THRESHOLD * 100
+            }
+            logger.warning(f"Low confidence prediction: {error_detail}")
+            raise HTTPException(status_code=400, detail=error_detail)
+        
+        elif confidence < HIGH_CONFIDENCE_THRESHOLD:
+            # Medium confidence - might be skin but not very certain
+            return {
+                "disease": disease_name,
+                "confidence": round(confidence * 100, 2),
+                "description": description,
+                "medication_info": medication_info,
+                "warning": "Medium confidence - please consult a doctor for confirmation",
+                "is_confident": True
+            }
+        else:
+            # High confidence - good prediction
+            return {
+                "disease": disease_name,
+                "confidence": round(confidence * 100, 2),
+                "description": description,
+                "medication_info": medication_info,
+                "is_confident": True,
+                "is_high_confidence": True
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Prediction error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+# =========================
+# NEW: SAVE ANALYSIS TO HISTORY ENDPOINT
+# =========================
+@app.post("/save-analysis-to-history")
+async def save_analysis_to_history(
+    user_id: str = Form(...),
+    image_data: str = Form(...),  # base64 image data
+    prediction_result: str = Form(...)  # JSON string of prediction result
+):
+    """
+    Save an existing analysis to history
+    """
+    temp_file_path = None
+    try:
+        import json
+        import base64
+        from PIL import Image
+        import io
+        
+        # Parse prediction result
+        prediction = json.loads(prediction_result)
+        
+        # Decode base64 image
+        image_bytes = base64.b64decode(image_data.split(',')[1] if ',' in image_data else image_data)
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        
+        # Save image temporarily for Cloudinary upload
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+            image.save(tmp_file.name)
+            temp_file_path = tmp_file.name
+            
+            history_info = save_skin_analysis_to_history(
+                user_id=user_id,
+                image_path=temp_file_path,
+                prediction_result=prediction
+            )
+        
+        if history_info and history_info.get("success"):
+            return {
+                "success": True,
+                "history_id": history_info["history_id"],
+                "image_url": history_info["image_url"]
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save to history")
+        
+    except Exception as e:
+        logger.error(f"Error saving to history: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save: {str(e)}")
+    finally:
+        # Clean up temp file
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+
+# =========================
+# GET USER HISTORY ENDPOINT
+# =========================
+@app.get("/user-skin-history/{user_id}")
+async def get_skin_history(user_id: str, limit: int = 20):
+    """
+    Get skin analysis history for a specific user
+    """
+    try:
+        history = get_user_skin_history(user_id, limit)
+        return {
+            "user_id": user_id,
+            "total": len(history),
+            "history": history
+        }
+    except Exception as e:
+        logger.error(f"Error fetching history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch history")
+
+# =========================
 # HEALTH CHECK ENDPOINT
 # =========================
 @app.get("/")
@@ -637,7 +803,8 @@ async def health_check():
             "high_confidence": HIGH_CONFIDENCE_THRESHOLD * 100
         },
         "classes": CLASS_NAMES,
-        "diseases_supported": len(DISEASE_DATABASE)
+        "diseases_supported": len(DISEASE_DATABASE),
+        "history_enabled": True
     }
 
 # =========================
@@ -660,3 +827,44 @@ async def get_disease_info(disease_name: str):
     if disease_key in DISEASE_DATABASE:
         return DISEASE_DATABASE[disease_key]
     raise HTTPException(status_code=404, detail="Disease information not found")
+
+# =========================
+# DELETE SKIN HISTORY ENDPOINT
+# =========================
+@app.delete("/delete-skin-history/{history_id}")
+async def delete_skin_history(history_id: str):
+    """
+    Delete a skin analysis history entry
+    """
+    try:
+        logger.info(f"Received delete request for history ID: {history_id}")
+        
+        # Call the database function
+        result = delete_skin_history_entry(history_id)
+        
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": "History deleted successfully"
+            }
+        else:
+            # Check if it's a "not found" error
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(
+                    status_code=404,
+                    detail=result.get("error", "History entry not found")
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=result.get("error", "Failed to delete history")
+                )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting history: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete: {str(e)}"
+        )

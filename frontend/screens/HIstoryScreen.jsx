@@ -19,6 +19,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
+// FastAPI URL for skin disease history
+const DISEASE_API_URL = "http://172.34.45.34:8000";
+
 // Color Theme
 const COLORS = {
   charcoal: '#3A343C',
@@ -28,19 +31,26 @@ const COLORS = {
   sand: '#D8CEB8',
   white: '#FFFFFF',
   lightGray: '#F5F3F0',
+  info: '#1976D2',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#F44336',
 };
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
+  const [skinDiseaseHistory, setSkinDiseaseHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
   const [expandedItem, setExpandedItem] = useState(null);
+  const [expandedDiseaseItem, setExpandedDiseaseItem] = useState(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [activeTab, setActiveTab] = useState('skincare');
 
   // Load user email and data on component mount
   useEffect(() => {
@@ -49,19 +59,22 @@ export default function HistoryScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const storedEmail = await AsyncStorage.getItem('user_email');
-      const storedUser = await AsyncStorage.getItem('user');
+      let email = await AsyncStorage.getItem('user_email');
       
-      if (storedEmail) {
-        setUserEmail(storedEmail);
-        fetchHistory(storedEmail);
-        fetchStats(storedEmail);
-      } else if (storedUser) {
-        const user = JSON.parse(storedUser);
-        setUserEmail(user.email);
-        await AsyncStorage.setItem('user_email', user.email);
-        fetchHistory(user.email);
-        fetchStats(user.email);
+      if (!email) {
+        const userString = await AsyncStorage.getItem('user');
+        if (userString) {
+          const user = JSON.parse(userString);
+          email = user.email;
+          if (email) {
+            await AsyncStorage.setItem('user_email', email);
+          }
+        }
+      }
+      
+      if (email) {
+        setUserEmail(email);
+        await fetchAllHistory(email);
       } else {
         setLoading(false);
         Alert.alert(
@@ -79,20 +92,46 @@ export default function HistoryScreen({ navigation }) {
     }
   };
 
-  const fetchHistory = async (email) => {
+  const fetchAllHistory = async (email) => {
     try {
-      const response = await axios.get(`${API_URL}/api/history/${email}`);
-      if (response.data.success) {
-        setHistory(response.data.data);
-      }
+      await Promise.all([
+        fetchSkincareHistory(email),
+        fetchSkinDiseaseHistory(email)
+      ]);
     } catch (error) {
-      console.error('Fetch history error:', error);
-      if (error.response?.status !== 404) {
-        Alert.alert('Error', 'Failed to load analysis history');
-      }
+      console.error('Error fetching histories:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchSkincareHistory = async (email) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/history/${email}`);
+      if (response.data.success) {
+        setHistory(response.data.data || []);
+        fetchStats(email);
+      }
+    } catch (error) {
+      console.error('Fetch skincare history error:', error);
+      if (error.response?.status !== 404) {
+        Alert.alert('Error', 'Failed to load skincare analysis history');
+      }
+    }
+  };
+
+  const fetchSkinDiseaseHistory = async (email) => {
+    try {
+      const response = await axios.get(`${DISEASE_API_URL}/user-skin-history/${email}`);
+      if (response.data) {
+        setSkinDiseaseHistory(response.data.history || []);
+      }
+    } catch (error) {
+      console.error('Fetch skin disease history error:', error);
+      if (error.response?.status !== 404) {
+        console.log('Error fetching skin disease history:', error.message);
+      }
     }
   };
 
@@ -113,14 +152,13 @@ export default function HistoryScreen({ navigation }) {
       return;
     }
     setRefreshing(true);
-    fetchHistory(userEmail);
-    fetchStats(userEmail);
+    fetchAllHistory(userEmail);
   };
 
-  const deleteAnalysis = async (id) => {
+  const deleteSkincareAnalysis = async (id) => {
     Alert.alert(
       'Delete Analysis',
-      'Are you sure you want to delete this analysis?',
+      'Are you sure you want to delete this skincare analysis?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -128,12 +166,13 @@ export default function HistoryScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${API_URL}/api/history/${id}`);
-              setHistory(history.filter(item => item._id !== id));
-              if (userEmail) {
-                fetchStats(userEmail);
+              const response = await axios.delete(`${API_URL}/api/history/${id}`);
+              
+              if (response.data.success) {
+                setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
+                if (userEmail) fetchStats(userEmail);
+                Alert.alert('Success', 'Analysis deleted successfully');
               }
-              Alert.alert('Success', 'Analysis deleted successfully');
             } catch (error) {
               console.error('Delete error:', error);
               Alert.alert('Error', 'Failed to delete analysis');
@@ -144,8 +183,48 @@ export default function HistoryScreen({ navigation }) {
     );
   };
 
+  const deleteSkinDiseaseAnalysis = async (id) => {
+    Alert.alert(
+      'Delete Analysis',
+      'Are you sure you want to delete this skin disease analysis?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              
+              const response = await axios.delete(`${DISEASE_API_URL}/delete-skin-history/${id}`);
+              
+              if (response.data.success) {
+                setSkinDiseaseHistory(prevHistory => 
+                  prevHistory.filter(item => item.id !== id)
+                );
+                Alert.alert('Success', 'Analysis deleted successfully');
+              } else {
+                throw new Error(response.data.detail || 'Failed to delete');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete analysis: ' + 
+                (error.response?.data?.detail || error.message));
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const toggleExpand = (id) => {
     setExpandedItem(expandedItem === id ? null : id);
+  };
+
+  const toggleDiseaseExpand = (id) => {
+    setExpandedDiseaseItem(expandedDiseaseItem === id ? null : id);
   };
 
   const openImageModal = (imageUrl) => {
@@ -160,21 +239,56 @@ export default function HistoryScreen({ navigation }) {
     setSelectedImage(null);
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // SIMPLIFIED DATE FORMATTING FUNCTION
+  const formatDate = (timestamp) => {
+    try {
+      if (!timestamp) return 'Date not available';
+      
+      let date;
+      
+      // Handle timestamp (should be in milliseconds from backend)
+      if (typeof timestamp === 'number') {
+        date = new Date(timestamp);
+      } else if (typeof timestamp === 'string') {
+        // Try to parse the string
+        date = new Date(timestamp);
+        
+        // If it's a numeric string, handle it as timestamp
+        if (!isNaN(date.getTime()) && timestamp.match(/^\d+$/)) {
+          const numTimestamp = parseInt(timestamp, 10);
+          date = new Date(numTimestamp);
+        }
+      } else {
+        date = new Date(timestamp);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date:', timestamp);
+        return 'Invalid date';
+      }
+
+      // Format the date in Philippines time (UTC+8)
+      // The date object automatically handles the timezone conversion
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Manila' // Force Philippines timezone
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Date error';
+    }
   };
 
   const getScoreColor = (score) => {
-    if (score >= 70) return '#F44336'; // Red for high scores (bad)
-    if (score >= 40) return '#FF9800'; // Orange for medium scores
-    return '#4CAF50'; // Green for low scores (good)
+    if (score >= 70) return COLORS.error;
+    if (score >= 40) return COLORS.warning;
+    return COLORS.success;
   };
 
   const getScoreLabel = (score) => {
@@ -183,7 +297,6 @@ export default function HistoryScreen({ navigation }) {
     return 'Low';
   };
 
-  // Calculate average acne score from history
   const calculateAverageAcneScore = () => {
     if (history.length === 0) return 0;
     
@@ -202,7 +315,23 @@ export default function HistoryScreen({ navigation }) {
     return validScores > 0 ? Math.round(totalScore / validScores) : 0;
   };
 
-  // Get latest analysis data for stats
+  const calculateAverageConfidence = () => {
+    if (skinDiseaseHistory.length === 0) return 0;
+    
+    let totalConfidence = 0;
+    let validEntries = 0;
+    
+    skinDiseaseHistory.forEach(item => {
+      const confidence = item.prediction?.confidence;
+      if (confidence !== undefined && confidence !== null) {
+        totalConfidence += confidence;
+        validEntries++;
+      }
+    });
+    
+    return validEntries > 0 ? Math.round(totalConfidence / validEntries) : 0;
+  };
+
   const getLatestAnalysisData = () => {
     if (history.length === 0) return { age: 'N/A', gender: 'N/A', acneScore: 0 };
     
@@ -214,14 +343,181 @@ export default function HistoryScreen({ navigation }) {
     };
   };
 
-  const renderAnalysisDetails = (item) => {
+  // Render Skin Disease Analysis Details
+  const renderSkinDiseaseDetails = (item) => {
+    const prediction = item.prediction || {};
+    
+    return (
+      <View style={styles.detailsContainer}>
+        <Text style={styles.detailsTitle}>Skin Disease Analysis</Text>
+        
+        {item.image_url && (
+          <View style={styles.imagePreviewSection}>
+            <Text style={styles.detailSectionTitle}>Analysis Image</Text>
+            <TouchableOpacity 
+              onPress={() => openImageModal(item.image_url)}
+              activeOpacity={0.8}
+            >
+              <Image 
+                source={{ uri: item.image_url }} 
+                style={styles.analysisImage}
+                resizeMode="cover"
+              />
+              <Text style={styles.viewImageText}>Tap to view full image</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        <View style={styles.detailSection}>
+          <Text style={styles.detailSectionTitle}>Detection Results</Text>
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Condition:</Text>
+            <Text style={[styles.detailValue, styles.diseaseName]}>
+              {prediction.disease?.replace(/_/g, ' ') || 'Unknown'}
+            </Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Confidence:</Text>
+            <View style={styles.confidenceContainer}>
+              <Text style={[
+                styles.confidenceValue,
+                { color: getScoreColor(prediction.confidence || 0) }
+              ]}>
+                {prediction.confidence || 0}%
+              </Text>
+              <Text style={[
+                styles.confidenceLabel,
+                { color: getScoreColor(prediction.confidence || 0) }
+              ]}>
+                ({getScoreLabel(prediction.confidence || 0)})
+              </Text>
+            </View>
+          </View>
+          
+          {prediction.warning && (
+            <View style={styles.warningContainer}>
+              <Icon name="warning" size={16} color={COLORS.warning} />
+              <Text style={styles.warningText}>{prediction.warning}</Text>
+            </View>
+          )}
+        </View>
+
+        {prediction.description && (
+          <View style={styles.detailSection}>
+            <Text style={styles.detailSectionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>{prediction.description}</Text>
+          </View>
+        )}
+
+        {prediction.medication_info && prediction.medication_info.has_medications && (
+          <View style={styles.detailSection}>
+            <Text style={styles.detailSectionTitle}>Treatment Recommendations</Text>
+            
+            {prediction.medication_info.medications && 
+             prediction.medication_info.medications.map((med, idx) => (
+              <View key={idx} style={styles.medicationCategory}>
+                <Text style={styles.medicationCategoryTitle}>{med.category}</Text>
+                <Text style={styles.medicationDescription}>{med.description}</Text>
+                {med.items && med.items.map((item, itemIdx) => (
+                  <View key={itemIdx} style={styles.medicationItem}>
+                    <Icon name="check-circle" size={14} color={COLORS.success} />
+                    <Text style={styles.medicationItemText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+            
+            {prediction.medication_info.general_advice && 
+             prediction.medication_info.general_advice.length > 0 && (
+              <View style={styles.adviceSection}>
+                <Text style={styles.adviceTitle}>Self-Care Tips</Text>
+                {prediction.medication_info.general_advice.map((advice, idx) => (
+                  <View key={idx} style={styles.adviceItem}>
+                    <Icon name="circle" size={6} color={COLORS.terracotta} />
+                    <Text style={styles.adviceText}>{advice}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render Skin Disease Item
+  const renderSkinDiseaseItem = ({ item, index }) => {
+    const prediction = item.prediction || {};
+    const diseaseName = prediction.disease?.replace(/_/g, ' ') || 'Unknown';
+    const confidence = prediction.confidence || 0;
+    
+    return (
+      <View style={[
+        styles.historyItem,
+        index === 0 && styles.firstItem,
+        index === skinDiseaseHistory.length - 1 && styles.lastItem
+      ]}>
+        <View style={styles.itemHeader}>
+          <View style={styles.dateContainer}>
+            <Text style={styles.itemDate}>{formatDate(item.created_at)}</Text>
+            <View style={[styles.typeBadge, styles.diseaseBadge]}>
+              <Icon name="medical-services" size={12} color={COLORS.white} />
+              <Text style={styles.typeBadgeText}>Skin Disease</Text>
+            </View>
+            {item.image_url && (
+              <Text style={styles.hasImageText}>📷 Image Available</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={() => deleteSkinDiseaseAnalysis(item.id)}
+            style={styles.deleteButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="delete-outline" size={20} color={COLORS.terracotta} />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.itemBody}>
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoLabel}>CONDITION</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>
+              {diseaseName}
+            </Text>
+          </View>
+          
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoLabel}>CONFIDENCE</Text>
+            <Text style={[styles.infoValue, { color: getScoreColor(confidence) }]}>
+              {confidence}%
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.detailsContainerButton}
+            onPress={() => toggleDiseaseExpand(item.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.detailsLabel}>
+              {expandedDiseaseItem === item.id ? 'HIDE DETAILS ↑' : 'VIEW DETAILS ↓'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {expandedDiseaseItem === item.id && renderSkinDiseaseDetails(item)}
+      </View>
+    );
+  };
+
+  // Render Skincare Analysis Details
+  const renderSkincareDetails = (item) => {
     const analysisData = item.analysisData || {};
     
     return (
       <View style={styles.detailsContainer}>
         <Text style={styles.detailsTitle}>Detailed Analysis</Text>
         
-        {/* Image Preview if available */}
         {item.imageUrl && (
           <View style={styles.imagePreviewSection}>
             <Text style={styles.detailSectionTitle}>Analysis Image</Text>
@@ -239,11 +535,9 @@ export default function HistoryScreen({ navigation }) {
           </View>
         )}
         
-        {/* Basic Info */}
         <View style={styles.detailSection}>
           <Text style={styles.detailSectionTitle}>Basic Information</Text>
           
-          {/* Age */}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Age:</Text>
             <Text style={styles.detailValue}>
@@ -251,7 +545,6 @@ export default function HistoryScreen({ navigation }) {
             </Text>
           </View>
           
-          {/* Gender */}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Gender:</Text>
             <Text style={styles.detailValue}>
@@ -259,7 +552,6 @@ export default function HistoryScreen({ navigation }) {
             </Text>
           </View>
           
-          {/* API Used */}
           {analysisData.api_used && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Analysis Method:</Text>
@@ -267,7 +559,6 @@ export default function HistoryScreen({ navigation }) {
             </View>
           )}
           
-          {/* Face Detected */}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Face Detected:</Text>
             <Text style={styles.detailValue}>
@@ -276,12 +567,10 @@ export default function HistoryScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Skin Analysis Scores */}
         {(analysisData.skin_attributes || analysisData.acne) && (
           <View style={styles.detailSection}>
             <Text style={styles.detailSectionTitle}>Skin Analysis Scores (0-100)</Text>
             
-            {/* Acne Score */}
             <View style={styles.scoreRow}>
               <Text style={styles.scoreLabel}>Acne:</Text>
               <View style={styles.scoreValueContainer}>
@@ -296,7 +585,6 @@ export default function HistoryScreen({ navigation }) {
               </View>
             </View>
             
-            {/* Dark Spots */}
             {analysisData.skin_attributes?.stain !== undefined && (
               <View style={styles.scoreRow}>
                 <Text style={styles.scoreLabel}>Dark Spots:</Text>
@@ -313,7 +601,6 @@ export default function HistoryScreen({ navigation }) {
               </View>
             )}
             
-            {/* Dark Circles */}
             {analysisData.skin_attributes?.dark_circle !== undefined && (
               <View style={styles.scoreRow}>
                 <Text style={styles.scoreLabel}>Dark Circles:</Text>
@@ -329,32 +616,35 @@ export default function HistoryScreen({ navigation }) {
                 </View>
               </View>
             )}
-            
-            {/* Blackheads */}
-            {analysisData.skin_attributes?.blackhead !== undefined && (
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreLabel}>Blackheads:</Text>
-                <View style={styles.scoreValueContainer}>
-                  <Text style={styles.scoreValue}>
-                    {analysisData.skin_attributes.blackhead}
-                  </Text>
-                  <Text style={[styles.scoreSeverity, { 
-                    color: getScoreColor(analysisData.skin_attributes.blackhead) 
-                  }]}>
-                    {getScoreLabel(analysisData.skin_attributes.blackhead)}
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
         )}
 
-        {/* Skincare Recommendations */}
+        {item.skinGrade && (
+          <View style={styles.detailSection}>
+            <Text style={styles.detailSectionTitle}>Skin Grade</Text>
+            <View style={styles.gradeContainer}>
+              {typeof item.skinGrade === 'object' ? (
+                <>
+                  <View style={styles.gradeHeader}>
+                    <Text style={styles.gradeText}>Grade: {item.skinGrade.grade || 'N/A'}</Text>
+                    <Text style={styles.gradeDescription}>{item.skinGrade.description || ''}</Text>
+                  </View>
+                  {item.skinGrade.overall_score && (
+                    <Text style={styles.gradeScore}>Score: {item.skinGrade.overall_score}</Text>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.gradeText}>Grade: {item.skinGrade}</Text>
+              )}
+              <Text style={styles.overallCondition}>Overall: {item.overallCondition || 'Unknown'}</Text>
+            </View>
+          </View>
+        )}
+
         {analysisData.skincare_recommendations && (
           <View style={styles.detailSection}>
             <Text style={styles.detailSectionTitle}>Skincare Recommendations</Text>
             
-            {/* Summary */}
             {analysisData.skincare_recommendations.summary && (
               <View style={styles.recommendationItem}>
                 <Icon name="info" size={16} color={COLORS.terracotta} style={styles.recommendationIcon} />
@@ -364,7 +654,6 @@ export default function HistoryScreen({ navigation }) {
               </View>
             )}
             
-            {/* Morning Routine */}
             {analysisData.skincare_recommendations.morning_routine && 
              analysisData.skincare_recommendations.morning_routine.length > 0 && (
               <View style={styles.routineSection}>
@@ -381,7 +670,6 @@ export default function HistoryScreen({ navigation }) {
               </View>
             )}
             
-            {/* Evening Routine */}
             {analysisData.skincare_recommendations.evening_routine && 
              analysisData.skincare_recommendations.evening_routine.length > 0 && (
               <View style={styles.routineSection}>
@@ -398,7 +686,6 @@ export default function HistoryScreen({ navigation }) {
               </View>
             )}
             
-            {/* Weekly Treatments */}
             {analysisData.skincare_recommendations.weekly_treatments && 
              analysisData.skincare_recommendations.weekly_treatments.length > 0 && (
               <View style={styles.routineSection}>
@@ -416,26 +703,12 @@ export default function HistoryScreen({ navigation }) {
             )}
           </View>
         )}
-
-        {/* Raw Data Button (for debugging) */}
-        <TouchableOpacity
-          style={styles.rawDataButton}
-          onPress={() => {
-            console.log('Analysis Data:', analysisData);
-            Alert.alert(
-              'Raw Analysis Data',
-              JSON.stringify(analysisData, null, 2),
-              [{ text: 'OK' }]
-            );
-          }}
-        >
-          <Text style={styles.rawDataText}>View Raw Analysis Data</Text>
-        </TouchableOpacity>
       </View>
     );
   };
 
-  const renderAnalysisItem = ({ item, index }) => {
+  // Render Skincare Item
+  const renderSkincareItem = ({ item, index }) => {
     const analysisData = item.analysisData || {};
     const age = analysisData.age || analysisData.face?.age || 'N/A';
     const gender = analysisData.gender || analysisData.face?.gender || 'N/A';
@@ -449,13 +722,24 @@ export default function HistoryScreen({ navigation }) {
       ]}>
         <View style={styles.itemHeader}>
           <View style={styles.dateContainer}>
-            <Text style={styles.itemDate}>{formatDate(item.timestamp)}</Text>
+            <Text style={styles.itemDate}>{formatDate(item.timestamp || item.createdAt)}</Text>
+            <View style={styles.typeBadge}>
+              <Icon name="face" size={12} color={COLORS.white} />
+              <Text style={styles.typeBadgeText}>Skincare</Text>
+            </View>
             {item.imageUrl && (
               <Text style={styles.hasImageText}>📷 Image Available</Text>
             )}
+            {item.skinGrade && (
+              <View style={styles.gradeBadge}>
+                <Text style={styles.gradeBadgeText}>
+                  {typeof item.skinGrade === 'object' ? item.skinGrade.grade : item.skinGrade}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
-            onPress={() => deleteAnalysis(item._id)}
+            onPress={() => deleteSkincareAnalysis(item.id)}
             style={styles.deleteButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -464,19 +748,16 @@ export default function HistoryScreen({ navigation }) {
         </View>
         
         <View style={styles.itemBody}>
-          {/* Age Display */}
           <View style={styles.infoContainer}>
             <Text style={styles.infoLabel}>AGE</Text>
             <Text style={styles.infoValue}>{age}</Text>
           </View>
           
-          {/* Gender Display */}
           <View style={styles.infoContainer}>
             <Text style={styles.infoLabel}>GENDER</Text>
             <Text style={styles.infoValue}>{gender}</Text>
           </View>
 
-          {/* Acne Score Display */}
           <View style={styles.infoContainer}>
             <Text style={styles.infoLabel}>ACNE SCORE</Text>
             <Text style={[styles.infoValue, { 
@@ -488,56 +769,58 @@ export default function HistoryScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.detailsContainerButton}
-            onPress={() => toggleExpand(item._id)}
+            onPress={() => toggleExpand(item.id)}
             activeOpacity={0.7}
           >
             <Text style={styles.detailsLabel}>
-              {expandedItem === item._id ? 'HIDE DETAILS ↑' : 'VIEW DETAILS ↓'}
+              {expandedItem === item.id ? 'HIDE DETAILS ↑' : 'VIEW DETAILS ↓'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {expandedItem === item._id && renderAnalysisDetails(item)}
+        {expandedItem === item.id && renderSkincareDetails(item)}
       </View>
     );
   };
 
+  // Stats Card Component
   const StatsCard = () => {
+    const totalSkincare = history.length;
+    const totalSkinDisease = skinDiseaseHistory.length;
+    const totalAnalyses = totalSkincare + totalSkinDisease;
+    
     const latestData = getLatestAnalysisData();
     const averageAcneScore = stats?.averageAcneScore || calculateAverageAcneScore();
-    const totalAnalyses = stats?.totalAnalyses || history.length;
+    const averageConfidence = calculateAverageConfidence();
     
     return (
       <View style={styles.statsCard}>
-        <Text style={styles.statsTitle}>Your Skin Analysis Stats</Text>
+        <Text style={styles.statsTitle}>
+          {activeTab === 'skincare' ? 'Your Skin Analysis Stats' : 'Your Disease Detection Stats'}
+        </Text>
         
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{totalAnalyses || 0}</Text>
+            <Text style={styles.statNumber}>{totalAnalyses}</Text>
             <Text style={styles.statLabel}>Total Analyses</Text>
           </View>
           
           <View style={styles.statDivider} />
           
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {latestData.age || 'N/A'}
-            </Text>
-            <Text style={styles.statLabel}>Latest Age</Text>
+            <Text style={styles.statNumber}>{totalSkincare}</Text>
+            <Text style={styles.statLabel}>Skincare</Text>
           </View>
           
           <View style={styles.statDivider} />
           
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {latestData.gender || 'N/A'}
-            </Text>
-            <Text style={styles.statLabel}>Gender</Text>
+            <Text style={styles.statNumber}>{totalSkinDisease}</Text>
+            <Text style={styles.statLabel}>Disease Detection</Text>
           </View>
         </View>
 
-        {/* Acne Score Distribution */}
-        {history.length > 0 && (
+        {activeTab === 'skincare' && history.length > 0 && (
           <View style={styles.scoreDistribution}>
             <Text style={styles.distributionTitle}>Average Acne Score</Text>
             <View style={styles.scoreBarContainer}>
@@ -552,10 +835,74 @@ export default function HistoryScreen({ navigation }) {
                 {averageAcneScore}/100
               </Text>
             </View>
+            
+            <View style={styles.latestInfoContainer}>
+              <Text style={styles.latestInfoTitle}>Latest Analysis:</Text>
+              <View style={styles.latestInfoRow}>
+                <Text style={styles.latestInfoLabel}>Age: </Text>
+                <Text style={styles.latestInfoValue}>{latestData.age}</Text>
+              </View>
+              <View style={styles.latestInfoRow}>
+                <Text style={styles.latestInfoLabel}>Gender: </Text>
+                <Text style={styles.latestInfoValue}>{latestData.gender}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'skindisease' && skinDiseaseHistory.length > 0 && (
+          <View style={styles.scoreDistribution}>
+            <Text style={styles.distributionTitle}>Average Confidence</Text>
+            <View style={styles.scoreBarContainer}>
+              <View style={[
+                styles.scoreBar, 
+                { 
+                  width: `${averageConfidence}%`,
+                  backgroundColor: getScoreColor(averageConfidence)
+                }
+              ]} />
+              <Text style={styles.scoreBarText}>
+                {averageConfidence}%
+              </Text>
+            </View>
+            
+            {skinDiseaseHistory.length > 0 && (
+              <View style={styles.latestInfoContainer}>
+                <Text style={styles.latestInfoTitle}>Most Common:</Text>
+                <View style={styles.latestInfoRow}>
+                  <Text style={styles.latestInfoLabel}>Condition: </Text>
+                  <Text style={styles.latestInfoValue}>
+                    {getMostCommonCondition()}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
       </View>
     );
+  };
+
+  const getMostCommonCondition = () => {
+    if (skinDiseaseHistory.length === 0) return 'N/A';
+    
+    const conditionCount = {};
+    skinDiseaseHistory.forEach(item => {
+      const condition = item.prediction?.disease?.replace(/_/g, ' ') || 'Unknown';
+      conditionCount[condition] = (conditionCount[condition] || 0) + 1;
+    });
+    
+    let mostCommon = 'Unknown';
+    let maxCount = 0;
+    
+    Object.entries(conditionCount).forEach(([condition, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommon = condition;
+      }
+    });
+    
+    return mostCommon;
   };
 
   if (loading) {
@@ -571,7 +918,6 @@ export default function HistoryScreen({ navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.sand} />
       
-      {/* Floating Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -602,29 +948,65 @@ export default function HistoryScreen({ navigation }) {
         }
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Statistics Card */}
-        {history.length > 0 && <StatsCard />}
+        {(history.length > 0 || skinDiseaseHistory.length > 0) && <StatsCard />}
 
-        {/* History List */}
+        {(history.length > 0 || skinDiseaseHistory.length > 0) && (
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'skincare' && styles.activeTab]}
+              onPress={() => setActiveTab('skincare')}
+            >
+              <Icon 
+                name="face" 
+                size={20} 
+                color={activeTab === 'skincare' ? COLORS.terracotta : COLORS.slate} 
+              />
+              <Text style={[
+                styles.tabText,
+                activeTab === 'skincare' && styles.activeTabText
+              ]}>
+                Skincare ({history.length})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'skindisease' && styles.activeTab]}
+              onPress={() => setActiveTab('skindisease')}
+            >
+              <Icon 
+                name="medical-services" 
+                size={20} 
+                color={activeTab === 'skindisease' ? COLORS.terracotta : COLORS.slate} 
+              />
+              <Text style={[
+                styles.tabText,
+                activeTab === 'skindisease' && styles.activeTabText
+              ]}>
+                Disease Detection ({skinDiseaseHistory.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.historySection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Previous Analyses</Text>
+            <Text style={styles.sectionTitle}>
+              {activeTab === 'skincare' ? 'Previous Analyses' : 'Disease Detection History'}
+            </Text>
             <Text style={styles.resultsCount}>
-              {history.length} result{history.length !== 1 ? 's' : ''}
+              {activeTab === 'skincare' ? history.length : skinDiseaseHistory.length} result
+              {(activeTab === 'skincare' ? history.length : skinDiseaseHistory.length) !== 1 ? 's' : ''}
             </Text>
           </View>
 
-          {history.length === 0 ? (
+          {activeTab === 'skincare' && history.length === 0 && (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIcon}>
                 <Text style={styles.emptyIconText}>📊</Text>
               </View>
-              <Text style={styles.emptyTitle}>No Analysis History</Text>
+              <Text style={styles.emptyTitle}>No Skincare History</Text>
               <Text style={styles.emptyText}>
-                You haven't completed any skin analyses yet.
-              </Text>
-              <Text style={styles.emptySubtext}>
-                Start by analyzing your skin to track your progress over time.
+                You haven't completed any skincare analyses yet.
               </Text>
               <TouchableOpacity
                 style={styles.analyzeButton}
@@ -634,11 +1016,43 @@ export default function HistoryScreen({ navigation }) {
                 <Text style={styles.analyzeButtonText}>Start Skin Analysis</Text>
               </TouchableOpacity>
             </View>
-          ) : (
+          )}
+
+          {activeTab === 'skindisease' && skinDiseaseHistory.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Text style={styles.emptyIconText}>🔬</Text>
+              </View>
+              <Text style={styles.emptyTitle}>No Disease Detection History</Text>
+              <Text style={styles.emptyText}>
+                You haven't completed any skin disease analyses yet.
+              </Text>
+              <TouchableOpacity
+                style={styles.analyzeButton}
+                onPress={() => navigation.navigate('SkinDisease')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.analyzeButtonText}>Start Disease Detection</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {activeTab === 'skincare' && history.length > 0 && (
             <FlatList
               data={history}
-              renderItem={renderAnalysisItem}
-              keyExtractor={item => item._id}
+              renderItem={renderSkincareItem}
+              keyExtractor={item => item.id || item._id}
+              scrollEnabled={false}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+
+          {activeTab === 'skindisease' && skinDiseaseHistory.length > 0 && (
+            <FlatList
+              data={skinDiseaseHistory}
+              renderItem={renderSkinDiseaseItem}
+              keyExtractor={item => item.id || item._id}
               scrollEnabled={false}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -646,11 +1060,9 @@ export default function HistoryScreen({ navigation }) {
           )}
         </View>
 
-        {/* Bottom padding */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Image Modal */}
       <Modal
         visible={imageModalVisible}
         transparent={true}
@@ -729,8 +1141,7 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     backgroundColor: COLORS.white,
-    margin: 16,
-    marginTop: 120,
+    marginBottom: 24,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -794,6 +1205,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
+    marginBottom: 16,
   },
   scoreBar: {
     position: 'absolute',
@@ -811,8 +1223,65 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  latestInfoContainer: {
+    backgroundColor: 'rgba(163, 107, 79, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  latestInfoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.terracotta,
+    marginBottom: 8,
+  },
+  latestInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  latestInfoLabel: {
+    fontSize: 13,
+    color: COLORS.slate,
+    fontWeight: '500',
+  },
+  latestInfoValue: {
+    fontSize: 13,
+    color: COLORS.charcoal,
+    fontWeight: '600',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.dustyBlue,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  activeTab: {
+    backgroundColor: 'rgba(163, 107, 79, 0.1)',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.slate,
+  },
+  activeTabText: {
+    color: COLORS.terracotta,
+    fontWeight: '600',
+  },
   historySection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -863,10 +1332,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 4,
   },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.terracotta,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+    gap: 4,
+  },
+  diseaseBadge: {
+    backgroundColor: COLORS.info,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
   hasImageText: {
     fontSize: 12,
     color: COLORS.terracotta,
     fontWeight: '500',
+    marginBottom: 4,
+  },
+  gradeBadge: {
+    backgroundColor: 'rgba(163, 107, 79, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  gradeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.terracotta,
   },
   deleteButton: {
     padding: 4,
@@ -903,7 +1404,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  // Expanded Details Styles
   detailsContainer: {
     marginTop: 16,
     paddingTop: 16,
@@ -960,7 +1460,92 @@ const styles = StyleSheet.create({
     color: COLORS.charcoal,
     fontWeight: '600',
   },
-  // Score Row Styles
+  diseaseName: {
+    color: COLORS.info,
+    fontSize: 16,
+  },
+  confidenceContainer: {
+    alignItems: 'flex-end',
+  },
+  confidenceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  confidenceLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 8,
+  },
+  warningText: {
+    fontSize: 13,
+    color: COLORS.warning,
+    flex: 1,
+    fontStyle: 'italic',
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: COLORS.slate,
+    lineHeight: 20,
+  },
+  medicationCategory: {
+    marginBottom: 16,
+  },
+  medicationCategoryTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.charcoal,
+    marginBottom: 4,
+  },
+  medicationDescription: {
+    fontSize: 12,
+    color: COLORS.slate,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  medicationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+    paddingLeft: 8,
+  },
+  medicationItemText: {
+    fontSize: 13,
+    color: COLORS.charcoal,
+    flex: 1,
+  },
+  adviceSection: {
+    marginTop: 12,
+    backgroundColor: 'rgba(163, 107, 79, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+  },
+  adviceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.terracotta,
+    marginBottom: 8,
+  },
+  adviceItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    gap: 8,
+  },
+  adviceText: {
+    fontSize: 13,
+    color: COLORS.slate,
+    flex: 1,
+    lineHeight: 18,
+  },
   scoreRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -989,7 +1574,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  // Recommendation Styles
+  gradeContainer: {
+    backgroundColor: 'rgba(163, 107, 79, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+  },
+  gradeHeader: {
+    marginBottom: 8,
+  },
+  gradeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.charcoal,
+    marginBottom: 4,
+  },
+  gradeDescription: {
+    fontSize: 14,
+    color: COLORS.slate,
+    fontStyle: 'italic',
+  },
+  gradeScore: {
+    fontSize: 14,
+    color: COLORS.charcoal,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  overallCondition: {
+    fontSize: 14,
+    color: COLORS.terracotta,
+    fontWeight: '600',
+  },
   recommendationItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1034,19 +1648,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     lineHeight: 18,
-  },
-  // Raw Data Button
-  rawDataButton: {
-    backgroundColor: 'rgba(88, 101, 110, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  rawDataText: {
-    fontSize: 14,
-    color: COLORS.slate,
-    fontWeight: '500',
   },
   centerContainer: {
     flex: 1,
@@ -1123,7 +1724,6 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: 40,
   },
-  // Modal Styles
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',

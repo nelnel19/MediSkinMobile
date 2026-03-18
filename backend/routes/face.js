@@ -11,7 +11,10 @@ const FACEPP_API_SECRET = process.env.FACEPP_API_SECRET;
 
 // Memory storage for multer
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Session-based cache
 const sessionCache = new Map();
@@ -21,141 +24,255 @@ function generateImageHash(imageData) {
   return crypto.createHash('md5').update(imageData).digest('hex');
 }
 
+// Function to calculate skin grade based on analysis results
+function calculateSkinGrade(skinData) {
+  const acneScore = skinData.acne || 0;
+  const stainScore = skinData.skin_attributes?.stain || 0;
+  const darkCircleScore = skinData.skin_attributes?.dark_circle || 0;
+  
+  // Calculate weighted scores
+  // Acne has highest weight (40%), followed by dark spots (35%), then dark circles (25%)
+  const weightedScore = (
+    (acneScore * 0.4) +
+    (stainScore * 0.35) +
+    (darkCircleScore * 0.25)
+  );
+  
+  // Convert to 0-100 scale (Face++ scores are 0-100)
+  const overallScore = weightedScore;
+  
+  // Determine grade based on score
+  let grade, description, color;
+  if (overallScore <= 15) {
+    grade = 'A+';
+    description = 'Excellent';
+    color = '#4CAF50';
+  } else if (overallScore <= 30) {
+    grade = 'A';
+    description = 'Very Good';
+    color = '#8BC34A';
+  } else if (overallScore <= 45) {
+    grade = 'B+';
+    description = 'Good';
+    color = '#CDDC39';
+  } else if (overallScore <= 60) {
+    grade = 'B';
+    description = 'Fair';
+    color = '#FFC107';
+  } else if (overallScore <= 75) {
+    grade = 'C';
+    description = 'Needs Improvement';
+    color = '#FF9800';
+  } else {
+    grade = 'D';
+    description = 'Requires Attention';
+    color = '#F44336';
+  }
+  
+  // Generate detailed analysis
+  const strengths = [];
+  const weaknesses = [];
+  
+  if (acneScore < 30) strengths.push('Clear skin with minimal breakouts');
+  else if (acneScore > 60) weaknesses.push('Active acne concerns');
+  
+  if (stainScore < 30) strengths.push('Even skin tone with minimal dark spots');
+  else if (stainScore > 60) weaknesses.push('Noticeable hyperpigmentation');
+  
+  if (darkCircleScore < 30) strengths.push('Well-rested eye area');
+  else if (darkCircleScore > 60) weaknesses.push('Prominent dark circles');
+  
+  return {
+    grade,
+    description,
+    color,
+    overall_score: Math.round(overallScore * 10) / 10,
+    components: {
+      acne: { score: Math.round(acneScore * 10) / 10, weight: 40 },
+      stain: { score: Math.round(stainScore * 10) / 10, weight: 35 },
+      dark_circle: { score: Math.round(darkCircleScore * 10) / 10, weight: 25 }
+    },
+    strengths: strengths.length > 0 ? strengths : ['Overall balanced skin'],
+    weaknesses: weaknesses.length > 0 ? weaknesses : ['Minor areas for improvement'],
+    recommendation: getGradeRecommendation(grade, skinData)
+  };
+}
+
+// Get grade-specific recommendations
+function getGradeRecommendation(grade, skinData) {
+  const age = parseInt(skinData.age) || 25;
+  
+  const recommendations = {
+    'A+': 'Your skin is in excellent condition! Maintain your current routine with focus on prevention. Continue using sunscreen daily and gentle cleansing. Consider adding antioxidants like Vitamin C for enhanced protection.',
+    'A': 'Very good skin health! Focus on maintaining your routine with consistent cleansing and sun protection. Consider targeted treatments for any specific concerns.',
+    'B+': 'Good skin health with minor concerns. Address specific issues like occasional breakouts or slight uneven tone with targeted ingredients like niacinamide or gentle exfoliation.',
+    'B': 'Fair skin condition with room for improvement. Focus on building a consistent routine with cleansing, moisturizing, and sun protection. Add treatments based on your primary concern.',
+    'C': 'Your skin needs some attention. Consider consulting with a skincare professional and establish a consistent routine. Focus on gentle products and sun protection.',
+    'D': 'Your skin requires significant attention. We strongly recommend consulting a dermatologist for personalized advice. Focus on gentle, soothing products and sun protection.'
+  };
+  
+  return recommendations[grade] || recommendations['B'];
+}
+
 // Function to generate personalized skincare recommendations
 function generateSkincareRecommendations(skinData) {
   const recommendations = [];
   
-  // Extract skin data
+  // Extract skin data with realistic ranges
   const acneScore = skinData.acne || 0;
   const stain = skinData.skin_attributes?.stain || 0;
   const darkCircle = skinData.skin_attributes?.dark_circle || 0;
   const age = parseInt(skinData.age) || 25;
+  const skinGrade = skinData.skin_grade || null;
   
-  // Determine skin issues
-  const hasAcne = acneScore > 30;
-  const hasSevereAcne = acneScore > 60;
-  const hasStains = stain > 40;
-  const hasDarkCircles = darkCircle > 40;
-  const isMatureSkin = age > 35;
+  // More realistic thresholds
+  const hasAcne = acneScore > 50;
+  const hasSevereAcne = acneScore > 75;
+  const hasStains = stain > 55;
+  const hasDarkCircles = darkCircle > 60;
+  
+  // Determine skin type based on combination of factors
+  let skinType = "Normal";
+  if (acneScore > 40) skinType = "Oily";
+  else if (stain > 40 && age < 30) skinType = "Combination";
+  else if (age > 50) skinType = "Dry";
   
   // Morning Routine
   const morningRoutine = [];
-  morningRoutine.push("Gentle cleanser suitable for your skin type");
   
-  if (hasAcne) {
-    morningRoutine.push("Salicylic acid or benzoyl peroxide treatment");
+  if (skinType === "Oily") {
+    morningRoutine.push("Foaming or gel cleanser with salicylic acid");
+  } else if (skinType === "Dry") {
+    morningRoutine.push("Cream or milky cleanser (hydrating)");
+  } else {
+    morningRoutine.push("Gentle low-pH cleanser");
   }
   
-  if (hasStains) {
-    morningRoutine.push("Vitamin C serum for brightening");
+  if (hasAcne && acneScore > 60) {
+    morningRoutine.push("Leave-on salicylic acid treatment (only on active breakouts)");
   }
   
-  morningRoutine.push("Lightweight moisturizer with SPF 30+");
+  if (hasStains && stain > 70) {
+    morningRoutine.push("Vitamin C serum for targeted brightening");
+  }
+  
+  if (skinType === "Oily") {
+    morningRoutine.push("Oil-free gel moisturizer");
+  } else {
+    morningRoutine.push("Lightweight moisturizer");
+  }
+  morningRoutine.push("Mineral sunscreen SPF 30+ (last step)");
   
   // Evening Routine
   const eveningRoutine = [];
-  eveningRoutine.push("Double cleanse: oil-based then water-based");
+  eveningRoutine.push("Gentle cleanser to remove sunscreen and impurities");
   
-  if (hasSevereAcne) {
-    eveningRoutine.push("Spot treatment with acne-fighting ingredients");
-    recommendations.push("Consider consulting a dermatologist for severe acne");
+  if (hasAcne && acneScore > 60) {
+    eveningRoutine.push("Benzoyl peroxide spot treatment (only on active acne)");
+    recommendations.push("Avoid over-drying - use acne treatments only on affected areas");
   }
   
-  if (hasStains) {
-    eveningRoutine.push("Retinol or niacinamide serum");
+  if (hasStains && stain > 70) {
+    eveningRoutine.push("Niacinamide serum for pigmentation");
   }
   
-  if (hasDarkCircles) {
-    eveningRoutine.push("Caffeine or vitamin K eye cream");
-    recommendations.push("Get 7-8 hours of sleep to reduce dark circles");
-  }
-  
-  if (isMatureSkin) {
-    eveningRoutine.push("Peptide or retinol night cream");
+  if (age > 35 && stain < 50) {
+    eveningRoutine.push("Retinol (start with 2-3x weekly)");
+    recommendations.push("Introduce retinol slowly to avoid irritation");
   } else {
-    eveningRoutine.push("Hydrating night cream");
+    eveningRoutine.push("Hydrating night cream or gel");
   }
   
   // Weekly Treatments
   const weeklyTreatments = [];
   
-  if (hasAcne) {
-    weeklyTreatments.push("Chemical exfoliation 2-3 times weekly (AHA/BHA)");
-    weeklyTreatments.push("Clay mask to absorb excess oil");
-    recommendations.push("Avoid touching your face to prevent breakouts");
+  if (hasAcne && acneScore > 60) {
+    weeklyTreatments.push("Salicylic acid mask 1-2x weekly");
+    recommendations.push("Don't over-exfoliate - stick to 1-2x weekly maximum");
   }
   
-  if (hasStains) {
-    weeklyTreatments.push("Weekly brightening mask with vitamin C");
+  if (hasStains && stain > 70 && age < 40) {
+    weeklyTreatments.push("Gentle enzyme exfoliation 1x weekly");
   }
   
-  if (!hasAcne && !hasStains) {
-    weeklyTreatments.push("Weekly hydrating sheet mask");
+  if (!hasAcne && !hasStains && stain < 30) {
+    weeklyTreatments.push("Hydrating mask 1x weekly for maintenance");
+  } else if (weeklyTreatments.length === 0) {
+    weeklyTreatments.push("Your skin looks balanced - stick to basic routine");
   }
   
   // Lifestyle Recommendations
   const lifestyleTips = [];
-  lifestyleTips.push("Drink at least 8 glasses of water daily");
-  lifestyleTips.push("Eat antioxidant-rich foods (berries, leafy greens)");
+  lifestyleTips.push("Drink water when thirsty - no need to over-hydrate");
   
   if (hasAcne) {
-    lifestyleTips.push("Reduce dairy and high-sugar foods");
-    recommendations.push("Change pillowcases twice weekly to prevent acne");
+    lifestyleTips.push("Change pillowcases weekly");
+    lifestyleTips.push("Avoid touching face throughout the day");
+    recommendations.push("Diet affects some people - track if dairy or sugar triggers breakouts");
   }
   
   if (hasDarkCircles) {
-    lifestyleTips.push("Prioritize sleep and reduce screen time before bed");
+    lifestyleTips.push("Aim for 7-8 hours of quality sleep");
+    lifestyleTips.push("Elevate head slightly while sleeping to reduce fluid retention");
   }
   
-  lifestyleTips.push("Always remove makeup before sleeping");
+  if (age > 40) {
+    lifestyleTips.push("Consider adding collagen-rich foods to diet");
+  }
   
-  // Product Type Recommendations
-  let productFocus = "Balanced hydration and maintenance";
-  if (hasAcne) productFocus = "Acne control and oil regulation";
-  if (hasStains) productFocus = "Brightening and pigmentation correction";
-  if (hasDarkCircles) productFocus = "Eye care and depuffing";
-  if (isMatureSkin) productFocus = "Anti-aging and firming";
+  lifestyleTips.push("Remove makeup before sleeping - always");
+  
+  // Product Focus
+  let productFocus = "Basic skincare maintenance";
+  if (hasAcne && acneScore > 60) productFocus = "Gentle acne management";
+  else if (hasStains && stain > 70) productFocus = "Targeted brightening";
+  else if (hasDarkCircles) productFocus = "Eye area care";
+  else if (age > 45) productFocus = "Hydration and gentle anti-aging";
+  
+  // Severity assessment
+  let acneSeverity = "low";
+  if (acneScore > 75) acneSeverity = "moderate (consider dermatologist)";
+  else if (acneScore > 60) acneSeverity = "mild";
+  
+  let pigmentationSeverity = "low";
+  if (stain > 80) pigmentationSeverity = "noticeable";
+  else if (stain > 60) pigmentationSeverity = "mild";
   
   return {
-    summary: `Your skin analysis shows ${hasAcne ? 'acne concerns' : 'good skin health'} with focus needed on ${productFocus.toLowerCase()}`,
+    summary: `Based on your analysis, your skin appears ${skinType.toLowerCase()} with ${acneScore > 50 ? 'some acne concerns' : 'minimal acne'}. Focus on ${productFocus.toLowerCase()}.`,
+    skin_type: skinType,
+    skin_grade: skinGrade,
     morning_routine: morningRoutine,
     evening_routine: eveningRoutine,
     weekly_treatments: weeklyTreatments,
     lifestyle_tips: lifestyleTips,
-    key_recommendations: recommendations,
+    key_recommendations: recommendations.slice(0, 3),
     severity: {
-      acne: hasSevereAcne ? "high" : hasAcne ? "moderate" : "low",
-      pigmentation: hasStains ? "moderate" : "low",
-      aging: isMatureSkin ? "preventive care needed" : "maintenance"
-    }
+      acne: acneSeverity,
+      pigmentation: pigmentationSeverity,
+      aging: age > 50 ? "noticeable signs" : age > 35 ? "preventive stage" : "early stage"
+    },
+    confidence_note: "These are AI-generated suggestions based on visual analysis. For medical concerns, please consult a dermatologist."
   };
 }
 
 // Function to map Face++ skin tone value (0-4) to readable format
 function mapSkinTone(toneValue) {
-  // Face++ skin tone values:
-  // 0: Fair / Light
-  // 1: Natural / Medium
-  // 2: Wheat / Slight tan
-  // 3: Tanned / Bronze
-  // 4: Darker skin tones
-  
   const toneMap = {
-    0: { value: 0, name: "Fair / Light", description: "Fair skin that burns easily", hex: "#F8E8D0" },
-    1: { value: 1, name: "Natural / Medium", description: "Medium skin that tans gradually", hex: "#E0C8A8" },
-    2: { value: 2, name: "Wheat / Slight tan", description: "Wheatish complexion, tans easily", hex: "#C8A880" },
-    3: { value: 3, name: "Tanned / Bronze", description: "Tanned skin, rarely burns", hex: "#A88060" },
-    4: { value: 4, name: "Darker skin tones", description: "Dark skin, never burns", hex: "#806040" }
+    0: { value: 0, name: "Fair / Light", description: "Very fair skin that burns easily", hex: "#F8E8D0" },
+    1: { value: 1, name: "Natural / Medium", description: "Fair to medium skin that tans gradually", hex: "#E0C8A8" },
+    2: { value: 2, name: "Wheat / Slight tan", description: "Medium to olive skin that tans easily", hex: "#C8A880" },
+    3: { value: 3, name: "Tanned / Bronze", description: "Tan to brown skin, rarely burns", hex: "#A88060" },
+    4: { value: 4, name: "Darker skin tones", description: "Brown to dark brown skin, very rarely burns", hex: "#806040" }
   };
   
-  // Ensure toneValue is a number between 0-4
   const tone = typeof toneValue === 'number' ? toneValue : parseInt(toneValue) || 1;
   const validTone = Math.max(0, Math.min(4, tone));
   
   return toneMap[validTone] || toneMap[1];
 }
 
-// Main analysis endpoint - USING REAL FACE++ API
+// Main analysis endpoint
 router.post('/analyze/skin', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -188,14 +305,13 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
     console.log('API Secret configured:', !!FACEPP_API_SECRET);
     
     try {
-      // Call Face++ API with skin attributes
+      // Call Face++ API
       console.log('Calling Face++ API with skin attributes...');
       
       const formData = new FormData();
       formData.append('api_key', FACEPP_API_KEY || '');
       formData.append('api_secret', FACEPP_API_SECRET || '');
       
-      // Request all available attributes including skin tone
       formData.append('return_attributes', 'gender,age,skinstatus,facequality,blur');
       
       formData.append('image_file', imgBuffer, {
@@ -228,53 +344,46 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
       const attrs = faceData.attributes || {};
       
       console.log('Face++ Raw Response Received - Face detected');
-      console.log('Skinstatus data:', JSON.stringify(attrs.skinstatus, null, 2));
       
       // Extract data from Face++
-      // Face++ provides skin tone as a numeric value (0-4)
       const rawSkinTone = attrs.skinstatus?.skin_tone;
       const skinToneValue = typeof rawSkinTone === 'number' ? rawSkinTone : 
                            (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
       
       const skinAttributes = {
-        stain: attrs.skinstatus?.stain || 0,
-        dark_circle: attrs.skinstatus?.dark_circle || 0,
-        acne: attrs.skinstatus?.acne || 0,
-        // Blackhead removed - not accurately provided by Face++
+        stain: Math.round((attrs.skinstatus?.stain || 0) * 10) / 10,
+        dark_circle: Math.round((attrs.skinstatus?.dark_circle || 0) * 10) / 10,
+        acne: Math.round((attrs.skinstatus?.acne || 0) * 10) / 10,
         skin_tone: {
           raw_value: skinToneValue,
           ...mapSkinTone(skinToneValue)
         }
       };
       
-      const result = {
-        // Age
-        age: attrs.age?.value || "Unknown",
-        
-        // Gender
-        gender: attrs.gender?.value || "Unknown",
-        
-        // Skin status
+      // Calculate skin grade
+      const skinGrade = calculateSkinGrade({
         acne: skinAttributes.acne,
-        
-        // Skin attributes including skin tone from Face++
         skin_attributes: skinAttributes,
-        
-        // Image quality
+        age: attrs.age?.value || 25
+      });
+      
+      const result = {
+        age: attrs.age?.value || "Unknown",
+        gender: attrs.gender?.value || "Unknown",
+        acne: skinAttributes.acne,
+        skin_attributes: skinAttributes,
+        skin_grade: skinGrade,
         image_quality: {
           blur: attrs.blur?.blurness?.value || 0,
           face_quality: attrs.facequality?.value || 0,
           passed: (attrs.facequality?.value || 0) > 50 && (attrs.blur?.blurness?.value || 100) < 50
         },
-        
-        // Skincare recommendations
         skincare_recommendations: generateSkincareRecommendations({
           acne: skinAttributes.acne,
           skin_attributes: skinAttributes,
-          age: attrs.age?.value || 25
+          age: attrs.age?.value || 25,
+          skin_grade: skinGrade
         }),
-        
-        // Metadata
         timestamp: timestamp,
         face_count: apiResult.faces.length,
         api_used: "Face++ (Skin Analysis)",
@@ -291,24 +400,19 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
       console.log(`✓ Real Face++ Analysis Complete:`);
       console.log(`  Age: ${result.age}, Gender: ${result.gender}`);
       console.log(`  Acne Score: ${result.acne}`);
-      console.log(`  Skin Tone: ${result.skin_attributes.skin_tone.name} (${result.skin_attributes.skin_tone.raw_value})`);
-      console.log(`  Face Detected: Yes`);
+      console.log(`  Skin Grade: ${result.skin_grade.grade} (${result.skin_grade.description})`);
       
       res.json(result);
 
     } catch (apiError) {
       console.error('Face++ API Error:', apiError.message);
       
-      if (apiError.response?.data?.error_message?.includes('NO_FACE_DETECTED') || 
-          apiError.message.includes('No face')) {
+      if (apiError.response?.data?.error_message?.includes('NO_FACE_DETECTED')) {
         return res.status(400).json({ 
           error: "NO_FACE_DETECTED",
-          message: "No face detected in the image. Please upload a clear photo of your face.",
-          details: "The AI could not detect a human face in the uploaded image."
+          message: "No face detected in the image. Please upload a clear photo of your face."
         });
       }
-      
-      console.error('API Error Details:', apiError.response?.data);
       
       return res.status(400).json({ 
         error: "ANALYSIS_FAILED",
@@ -373,28 +477,36 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
                          (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
     
     const skinAttributes = {
-      stain: attrs.skinstatus?.stain || 0,
-      dark_circle: attrs.skinstatus?.dark_circle || 0,
-      acne: attrs.skinstatus?.acne || 0,
-      // Blackhead removed
+      stain: Math.round((attrs.skinstatus?.stain || 0) * 10) / 10,
+      dark_circle: Math.round((attrs.skinstatus?.dark_circle || 0) * 10) / 10,
+      acne: Math.round((attrs.skinstatus?.acne || 0) * 10) / 10,
       skin_tone: {
         raw_value: skinToneValue,
         ...mapSkinTone(skinToneValue)
       }
     };
     
+    // Calculate skin grade
+    const skinGrade = calculateSkinGrade({
+      acne: skinAttributes.acne,
+      skin_attributes: skinAttributes,
+      age: attrs.age?.value || 25
+    });
+    
     const result = {
       age: attrs.age?.value || "Unknown",
       gender: attrs.gender?.value || "Unknown",
       acne: skinAttributes.acne,
       skin_attributes: skinAttributes,
+      skin_grade: skinGrade,
       image_quality: { 
         passed: true
       },
       skincare_recommendations: generateSkincareRecommendations({
         acne: skinAttributes.acne,
         skin_attributes: skinAttributes,
-        age: attrs.age?.value || 25
+        age: attrs.age?.value || 25,
+        skin_grade: skinGrade
       }),
       timestamp: timestamp,
       face_count: apiResult.faces.length,
@@ -433,14 +545,27 @@ router.post('/analyze/test', upload.single('file'), async (req, res) => {
         stain: 35,
         dark_circle: 42,
         acne: 45,
-        // Blackhead removed
         skin_tone: {
           raw_value: 2,
           value: 2,
           name: "Wheat / Slight tan",
-          description: "Wheatish complexion, tans easily",
+          description: "Medium to olive skin that tans easily",
           hex: "#C8A880"
         }
+      },
+      skin_grade: {
+        grade: "B+",
+        description: "Good",
+        color: "#CDDC39",
+        overall_score: 41.3,
+        components: {
+          acne: { score: 45, weight: 40 },
+          stain: { score: 35, weight: 35 },
+          dark_circle: { score: 42, weight: 25 }
+        },
+        strengths: ["Even skin tone with minimal dark spots", "Well-rested eye area"],
+        weaknesses: ["Minor areas for improvement"],
+        recommendation: "Good skin health with minor concerns. Address specific issues like occasional breakouts or slight uneven tone with targeted ingredients like niacinamide or gentle exfoliation."
       },
       image_quality: {
         blur: 15,
@@ -448,13 +573,33 @@ router.post('/analyze/test', upload.single('file'), async (req, res) => {
         passed: true,
       },
       skincare_recommendations: {
-        summary: "Your skin shows moderate acne concerns with some pigmentation",
-        morning_routine: ["Gentle cleanser", "Vitamin C serum", "SPF 30+ moisturizer"],
-        evening_routine: ["Double cleanse", "Salicylic acid treatment", "Hydrating night cream"],
-        weekly_treatments: ["Chemical exfoliation 2x weekly", "Clay mask 1x weekly"],
-        lifestyle_tips: ["Drink 8 glasses of water", "Reduce sugar intake", "Change pillowcases twice weekly"],
-        key_recommendations: ["Consider niacinamide for pigmentation"],
-        severity: { acne: "moderate", pigmentation: "moderate", aging: "maintenance" }
+        summary: "Based on your analysis, your skin appears combination with some acne concerns. Focus on gentle acne management.",
+        skin_type: "Combination",
+        morning_routine: [
+          "Gentle low-pH cleanser",
+          "Oil-free gel moisturizer",
+          "Mineral sunscreen SPF 30+ (last step)"
+        ],
+        evening_routine: [
+          "Gentle cleanser to remove sunscreen and impurities",
+          "Hydrating night cream or gel"
+        ],
+        weekly_treatments: [
+          "Your skin looks balanced - stick to basic routine"
+        ],
+        lifestyle_tips: [
+          "Drink water when thirsty - no need to over-hydrate",
+          "Remove makeup before sleeping - always"
+        ],
+        key_recommendations: [
+          "Diet affects some people - track if dairy or sugar triggers breakouts"
+        ],
+        severity: { 
+          acne: "mild", 
+          pigmentation: "low", 
+          aging: "early stage" 
+        },
+        confidence_note: "These are AI-generated suggestions based on visual analysis. For medical concerns, please consult a dermatologist."
       },
       timestamp: timestamp,
       face_count: 1,

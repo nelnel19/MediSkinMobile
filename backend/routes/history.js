@@ -1,41 +1,78 @@
 import express from "express";
-import History from "../models/History.js";
-import crypto from "crypto"; // Import crypto at the top
+import mongoose from "mongoose";
+import crypto from "crypto";
 
 const router = express.Router();
+
+// Define History Schema directly in the route file to ensure consistency
+const historySchema = new mongoose.Schema({
+  userEmail: { 
+    type: String, 
+    required: true,
+    index: true 
+  },
+  imageHash: { 
+    type: String, 
+    required: true,
+    unique: true 
+  },
+  imageUrl: { 
+    type: String, 
+    required: true 
+  },
+  analysisData: { 
+    type: mongoose.Schema.Types.Mixed, 
+    required: true 
+  },
+  skinGrade: { 
+    type: mongoose.Schema.Types.Mixed, // Can be string or object
+    default: 'Unknown' 
+  },
+  overallCondition: { 
+    type: String, 
+    default: 'Unknown' 
+  },
+  timestamp: { 
+    type: Date, 
+    default: Date.now 
+  }
+}, {
+  timestamps: true,
+  strict: false // Allow flexible schema for nested objects
+});
+
+// Create model if it doesn't exist
+const History = mongoose.models.History || mongoose.model('History', historySchema);
 
 // Save analysis to history
 router.post("/save-analysis", async (req, res) => {
   try {
-    const { 
+    const { userEmail, imageUrl, analysisResult } = req.body;
+
+    console.log("Save analysis request received:", { 
       userEmail, 
-      imageUrl, 
-      analysisResult // The complete result from your face analysis
-    } = req.body;
+      hasImage: !!imageUrl, 
+      hasResult: !!analysisResult 
+    });
 
     if (!userEmail || !imageUrl || !analysisResult) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Missing required fields',
+        missing: {
+          userEmail: !userEmail,
+          imageUrl: !imageUrl,
+          analysisResult: !analysisResult
+        }
       });
     }
 
-    // Generate hash from image URL using crypto
+    // Generate hash from image URL
     const imageHash = crypto.createHash('md5')
-      .update(imageUrl)
+      .update(imageUrl + Date.now())
       .digest('hex');
 
-    // Check for existing analysis
-    const existingAnalysis = await History.findOne({ userEmail, imageHash });
-    if (existingAnalysis) {
-      return res.status(200).json({
-        success: true,
-        message: 'Analysis already saved',
-        isDuplicate: true
-      });
-    }
-
-    // Extract skinGrade and overallCondition from analysisResult if available
+    // Extract skinGrade from analysisResult (handle both object and string formats)
     let skinGrade = 'Unknown';
     let overallCondition = 'Unknown';
     
@@ -45,10 +82,35 @@ router.post("/save-analysis", async (req, res) => {
       skinGrade = analysisResult.skinGrade;
     }
     
-    if (analysisResult.overall_condition) {
-      overallCondition = analysisResult.overall_condition;
-    } else if (analysisResult.overallCondition) {
-      overallCondition = analysisResult.overallCondition;
+    // Determine overall condition based on skin grade if available
+    if (skinGrade && typeof skinGrade === 'object' && skinGrade.grade) {
+      const grade = skinGrade.grade;
+      if (grade === 'A+' || grade === 'A') overallCondition = 'Excellent';
+      else if (grade === 'B+' || grade === 'B') overallCondition = 'Good';
+      else if (grade === 'C') overallCondition = 'Fair';
+      else if (grade === 'D') overallCondition = 'Needs Improvement';
+    } else if (typeof skinGrade === 'string') {
+      if (skinGrade.startsWith('A')) overallCondition = 'Excellent';
+      else if (skinGrade.startsWith('B')) overallCondition = 'Good';
+      else if (skinGrade.startsWith('C')) overallCondition = 'Fair';
+      else if (skinGrade.startsWith('D')) overallCondition = 'Needs Improvement';
+    }
+
+    // Check for existing analysis (within last hour to avoid duplicates)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const existingAnalysis = await History.findOne({ 
+      userEmail, 
+      imageHash: { $regex: imageHash.substring(0, 10) }, // Partial match
+      timestamp: { $gte: oneHourAgo }
+    });
+
+    if (existingAnalysis) {
+      return res.status(200).json({
+        success: true,
+        message: 'Analysis already saved recently',
+        isDuplicate: true,
+        id: existingAnalysis._id
+      });
     }
 
     // Save to database
@@ -56,22 +118,27 @@ router.post("/save-analysis", async (req, res) => {
       userEmail,
       imageHash,
       imageUrl,
-      analysisData: analysisResult, // Store the complete result
+      analysisData: analysisResult,
       skinGrade,
-      overallCondition
+      overallCondition,
+      timestamp: new Date()
     });
 
     await newAnalysis.save();
 
+    console.log("Analysis saved successfully with ID:", newAnalysis._id);
+
     res.status(201).json({
       success: true,
       message: 'Analysis saved successfully',
-      isDuplicate: false
+      isDuplicate: false,
+      id: newAnalysis._id
     });
 
   } catch (error) {
     console.error('Save analysis error:', error);
     
+    // Handle duplicate key error
     if (error.code === 11000) {
       return res.status(200).json({
         success: true,
@@ -82,32 +149,37 @@ router.post("/save-analysis", async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error',
+      error: error.toString()
     });
   }
 });
-
-// Rest of your routes remain the same...
 
 // Get user's analysis history
 router.get("/:userEmail", async (req, res) => {
   try {
     const { userEmail } = req.params;
-    const { limit = 10, page = 1 } = req.query;
+    const { limit = 20, page = 1 } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const analyses = await History.find({ userEmail })
       .sort({ timestamp: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
-      .select('imageUrl skinGrade overallCondition timestamp analysisData'); // Include ALL analysisData
+      .limit(parseInt(limit));
 
     const total = await History.countDocuments({ userEmail });
 
     res.json({
       success: true,
-      data: analyses,
+      data: analyses.map(analysis => ({
+        id: analysis._id,
+        imageUrl: analysis.imageUrl,
+        skinGrade: analysis.skinGrade,
+        overallCondition: analysis.overallCondition,
+        timestamp: analysis.timestamp,
+        analysisData: analysis.analysisData
+      })),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -120,7 +192,7 @@ router.get("/:userEmail", async (req, res) => {
     console.error('Get history error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 });
@@ -147,7 +219,7 @@ router.get("/analysis/:id", async (req, res) => {
     console.error('Get analysis error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 });
@@ -174,7 +246,7 @@ router.delete("/:id", async (req, res) => {
     console.error('Delete analysis error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 });
@@ -186,26 +258,9 @@ router.get("/stats/:userEmail", async (req, res) => {
 
     const totalAnalyses = await History.countDocuments({ userEmail });
     
-    // Get skin grade distribution (optional, can keep or remove)
-    const gradeDistribution = await History.aggregate([
-      { $match: { userEmail } },
-      { $group: { _id: "$skinGrade", count: { $sum: 1 } } }
-    ]);
-
-    // Get latest analysis WITH analysisData
+    // Get latest analysis
     const latestAnalysis = await History.findOne({ userEmail })
-      .sort({ timestamp: -1 })
-      .select('analysisData timestamp imageUrl');
-
-    // Extract age and gender from the latest analysis
-    let latestAge = 'N/A';
-    let latestGender = 'N/A';
-    
-    if (latestAnalysis && latestAnalysis.analysisData) {
-      const analysis = latestAnalysis.analysisData;
-      latestAge = analysis.age || analysis.face?.age || 'N/A';
-      latestGender = analysis.gender || analysis.face?.gender || 'N/A';
-    }
+      .sort({ timestamp: -1 });
 
     // Calculate average acne score
     const allAnalyses = await History.find({ userEmail }).select('analysisData');
@@ -225,19 +280,35 @@ router.get("/stats/:userEmail", async (req, res) => {
     
     const averageAcneScore = validScores > 0 ? Math.round(totalAcneScore / validScores) : 0;
 
+    // Get grade distribution
+    const gradeDistribution = await History.aggregate([
+      { $match: { userEmail } },
+      { $group: { 
+        _id: { 
+          $ifNull: [
+            "$skinGrade.grade",
+            "$skinGrade",
+            "Unknown"
+          ]
+        }, 
+        count: { $sum: 1 } 
+      } }
+    ]);
+
     res.json({
       success: true,
       data: {
         totalAnalyses,
         gradeDistribution,
-        latestAnalysis: {
-          age: latestAge,
-          gender: latestGender,
-          acneScore: latestAnalysis?.analysisData?.acne || 
-                    latestAnalysis?.analysisData?.skin_attributes?.acne || 0,
-          imageUrl: latestAnalysis?.imageUrl,
-          timestamp: latestAnalysis?.timestamp
-        },
+        latestAnalysis: latestAnalysis ? {
+          age: latestAnalysis.analysisData?.age || 'N/A',
+          gender: latestAnalysis.analysisData?.gender || 'N/A',
+          acneScore: latestAnalysis.analysisData?.acne || 
+                    latestAnalysis.analysisData?.skin_attributes?.acne || 0,
+          skinGrade: latestAnalysis.skinGrade,
+          imageUrl: latestAnalysis.imageUrl,
+          timestamp: latestAnalysis.timestamp
+        } : null,
         averageAcneScore
       }
     });
@@ -246,7 +317,57 @@ router.get("/stats/:userEmail", async (req, res) => {
     console.error('Get stats error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
+// Test endpoint
+router.post("/test", async (req, res) => {
+  try {
+    const testData = {
+      userEmail: "test@example.com",
+      imageUrl: "test-image-url",
+      analysisResult: {
+        age: "28",
+        gender: "Female",
+        acne: 45,
+        skin_grade: {
+          grade: "B+",
+          description: "Good",
+          color: "#CDDC39",
+          overall_score: 41.3
+        }
+      }
+    };
+
+    // Generate hash
+    const imageHash = crypto.createHash('md5')
+      .update(testData.imageUrl + Date.now())
+      .digest('hex');
+
+    const newAnalysis = new History({
+      userEmail: testData.userEmail,
+      imageHash,
+      imageUrl: testData.imageUrl,
+      analysisData: testData.analysisResult,
+      skinGrade: testData.analysisResult.skin_grade,
+      overallCondition: "Good"
+    });
+
+    await newAnalysis.save();
+
+    res.json({
+      success: true,
+      message: "Test data saved successfully",
+      id: newAnalysis._id
+    });
+
+  } catch (error) {
+    console.error('Test error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 });

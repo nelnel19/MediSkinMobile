@@ -1,0 +1,66 @@
+2026-02-26 23:58:13,175 - main - INFO - Looking for model at: C:\Users\PC\Downloads\MediSkinMobile-main\MediSkinMobile-main\backend\models\SkinDisease_MobileNetV2.keras
+2026-02-26 23:58:13,176 - main - INFO - File exists: True
+2026-02-26 23:58:13,176 - main - INFO - Attempting to load model with compile=True...
+2026-02-26 23:58:15,879 - main - INFO - ==================================================
+2026-02-26 23:58:15,879 - main - INFO - MODEL DEBUG INFORMATION
+2026-02-26 23:58:15,880 - main - INFO - ==================================================
+2026-02-26 23:58:15,881 - main - INFO - Model type: <class 'keras.src.models.functional.Functional'>
+2026-02-26 23:58:15,882 - main - INFO - Model input shape: (None, 224, 224, 3)
+2026-02-26 23:58:15,882 - main - INFO - Model output shape: (None, 12)
+2026-02-26 23:58:15,883 - main - INFO - Model expects 12 output classes
+2026-02-26 23:58:16,091 - main - INFO - Model Summary:
+2026-02-26 23:58:16,126 - main - INFO - ... (summary truncated)
+2026-02-26 23:58:16,127 - main - INFO - First 5 layers:
+2026-02-26 23:58:16,128 - main - INFO -   Layer 0: input_layer_3 - InputLayer
+2026-02-26 23:58:16,129 - main - INFO -   Layer 1: mobilenetv2_1.00_224 - Functional
+2026-02-26 23:58:16,129 - main - INFO -   Layer 2: global_average_pooling2d_1 - GlobalAveragePooling2D
+2026-02-26 23:58:16,130 - main - INFO -   Layer 3: batch_normalization_1 - BatchNormalization
+2026-02-26 23:58:16,131 - main - INFO -   Layer 4: dense_1 - Dense
+2026-02-26 23:58:16,131 - main - INFO - Using known classes: ['Acne', 'Actinic_Keratosis', 'Candidiasis', 'Eczema', 'Infestations_Bites', 'Moles', 'Psoriasis', 'Rosacea', 'Sun_Sunlight_Damage', 'Tinea', 'Vitiligo', 'Warts']
+2026-02-26 23:58:16,132 - main - INFO - Final CLASS_NAMES count: 12
+2026-02-26 23:58:16,132 - main - INFO - Testing model with random input...
+2026-02-26 23:58:26,297 - main - INFO - Test prediction shape: (1, 12)
+2026-02-26 23:58:26,298 - main - INFO - Test prediction stats - min: 0.0001, max: 0.8921, mean: 0.0833
+2026-02-26 23:58:26,300 - main - INFO - Test prediction sample (first 5 values): [1.5765493e-03 8.9212340e-01 6.9704116e-04 4.4721278e-04 6.4015598e-03]
+2026-02-26 23:58:26,301 - main - INFO - Prediction standard deviation: 0.244141
+2026-02-26 23:58:26,324 - main - INFO - ==================================================
+2026-02-26 23:59:22,473 - main - INFO - Looking for model at: C:\Users\PC\Downloads\MediSkinMobile-main\MediSkinMobile-main\backend\models\SkinDisease_MobileNetV2.keras
+2026-02-26 23:59:22,473 - main - INFO - File exists: True
+2026-02-26 23:59:22,474 - main - INFO - Attempting to load model with compile=True...
+2026-02-26 23:59:24,538 - main - INFO - ==================================================
+2026-02-26 23:59:24,538 - main - INFO - MODEL DEBUG INFORMATION
+2026-02-26 23:59:24,539 - main - INFO - ==================================================
+2026-02-26 23:59:24,539 - main - INFO - Model type: <class 'keras.src.models.functional.Functional'>
+2026-02-26 23:59:24,539 - main - INFO - Model input shape: (None, 224, 224, 3)
+2026-02-26 23:59:24,540 - main - INFO - Model output shape: (None, 12)
+2026-02-26 23:59:24,540 - main - INFO - Model expects 12 output classes
+2026-02-26 23:59:24,565 - main - INFO - Model Summary:
+2026-02-26 23:59:24,579 - main - INFO - ... (summary truncated)
+2026-02-26 23:59:24,579 - main - INFO - First 5 layers:
+2026-02-26 23:59:24,580 - main - INFO -   Layer 0: input_layer_3 - InputLayer
+2026-02-26 23:59:24,580 - main - INFO -   Layer 1: mobilenetv2_1.00_224 - Functional
+2026-02-26 23:59:24,580 - main - INFO -   Layer 2: global_average_pooling2d_1 - GlobalAveragePooling2D
+2026-02-26 23:59:24,581 - main - INFO -   Layer 3: batch_normalization_1 - BatchNormalization
+2026-02-26 23:59:24,581 - main - INFO -   Layer 4: dense_1 - Dense
+2026-02-26 23:59:24,581 - main - INFO - Using known classes: ['Acne', 'Actinic_Keratosis', 'Candidiasis', 'Eczema', 'Infestations_Bites', 'Moles', 'Psoriasis', 'Rosacea', 'Sun_Sunlight_Damage', 'Tinea', 'Vitiligo', 'Warts']
+2026-02-26 23:59:24,582 - main - INFO - Final CLASS_NAMES count: 12
+2026-02-26 23:59:24,582 - main - INFO - Testing model with random input...
+2026-02-26 23:59:27,222 - main - INFO - Test prediction shape: (1, 12)
+2026-02-26 23:59:27,222 - main - INFO - Test prediction stats - min: 0.0001, max: 0.8880, mean: 0.0833
+2026-02-26 23:59:27,223 - main - INFO - Test prediction sample (first 5 values): [1.6702149e-03 8.8801152e-01 7.3559501e-04 4.6476274e-04 6.4204237e-03]
+2026-02-26 23:59:27,223 - main - INFO - Prediction standard deviation: 0.242929
+2026-02-26 23:59:27,233 - main - INFO - ==================================================
+2026-02-27 00:03:03,871 - main - INFO - Looking for model at: C:\Users\PC\Downloads\MediSkinMobile-main\MediSkinMobile-main\backend\models\SkinDisease_MobileNetV2.keras
+2026-02-27 00:03:03,871 - main - INFO - File exists: True
+2026-02-27 00:03:03,871 - main - INFO - Attempting to load model with compile=True...
+2026-02-27 00:03:06,079 - main - INFO -  Model loaded successfully with compile=True
+2026-02-27 00:03:06,079 - main - INFO - ==================================================
+2026-02-27 00:03:06,079 - main - INFO - MODEL DEBUG INFORMATION
+2026-02-27 00:03:06,080 - main - INFO - ==================================================
+2026-02-27 00:03:06,080 - main - INFO - Model type: <class 'keras.src.models.functional.Functional'>
+2026-02-27 00:03:06,080 - main - INFO - Model input shape: (None, 224, 224, 3)
+2026-02-27 00:03:06,081 - main - INFO - Model output shape: (None, 12)
+2026-02-27 00:03:06,081 - main - INFO - Model expects 12 output classes
+2026-02-27 00:03:06,082 - main - INFO - Using known classes: ['Acne', 'Actinic_Keratosis', 'Candidiasis', 'Eczema', 'Infestations_Bites', 'Moles', 'Psoriasis', 'Rosacea', 'Sun_Sunlight_Damage', 'Tinea', 'Vitiligo', 'Warts']
+2026-02-27 00:03:06,082 - main - INFO - Final CLASS_NAMES count: 12
+2026-02-27 00:03:06,083 - main - INFO - Applied bias correction: Actinic_Keratosis weight reduced to 0.3

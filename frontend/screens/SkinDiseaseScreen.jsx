@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 // Color Theme - Same as SkincareScreen
 const COLORS = {
@@ -29,15 +31,67 @@ const COLORS = {
 };
 
 // 🔴 CHANGE THIS TO YOUR PC IP
-const API_URL = "http://10.219.12.186:8000";
+const API_URL = "http://172.34.45.34:8000";
 
 export default function SkinDiseaseScreen({ navigation }) {
   const [image, setImage] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [savingToHistory, setSavingToHistory] = useState(false);
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorDetails, setErrorDetails] = useState("");
+  const [historySaved, setHistorySaved] = useState(false);
+
+  // Get user ID from storage (actual email)
+  const getUserId = async () => {
+    try {
+      // Try to get user_id first (most direct)
+      const userId = await AsyncStorage.getItem('user_id');
+      if (userId) {
+        return userId;
+      }
+      
+      // Fallback to user_email
+      const userEmail = await AsyncStorage.getItem('user_email');
+      if (userEmail) {
+        return userEmail;
+      }
+      
+      // Fallback to user object
+      const userString = await AsyncStorage.getItem('user');
+      if (userString) {
+        const user = JSON.parse(userString);
+        return user.email;
+      }
+      
+      // No user found
+      return null;
+    } catch (error) {
+      console.error('Error getting user ID:', error);
+      return null;
+    }
+  };
+
+  // Check if user is logged in
+  const checkLoginStatus = async () => {
+    const userId = await getUserId();
+    return userId !== null;
+  };
+
+  // Convert image to base64
+  const convertImageToBase64 = async (uri) => {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      return null;
+    }
+  };
 
   // Medications List Component
   const MedicationsList = ({ medications, generalAdvice }) => {
@@ -175,7 +229,7 @@ export default function SkinDiseaseScreen({ navigation }) {
     );
   };
 
-  // ORIGINAL FUNCTIONALITY - KEPT AS IS
+  // Request permissions
   const requestPermissions = async () => {
     const galleryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
@@ -200,11 +254,14 @@ export default function SkinDiseaseScreen({ navigation }) {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true, // Get base64 for saving to history
       });
 
       if (!result.canceled) {
         setImage(result.assets[0].uri);
+        setImageBase64(result.assets[0].base64 ? `data:image/jpeg;base64,${result.assets[0].base64}` : null);
         setResult(null);
+        setHistorySaved(false);
         setShowRetakeModal(false);
       }
     } catch (error) {
@@ -222,11 +279,14 @@ export default function SkinDiseaseScreen({ navigation }) {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true, // Get base64 for saving to history
       });
 
       if (!result.canceled) {
         setImage(result.assets[0].uri);
+        setImageBase64(result.assets[0].base64 ? `data:image/jpeg;base64,${result.assets[0].base64}` : null);
         setResult(null);
+        setHistorySaved(false);
         setShowRetakeModal(false);
       }
     } catch (error) {
@@ -244,6 +304,7 @@ export default function SkinDiseaseScreen({ navigation }) {
     setLoading(true);
     setShowRetakeModal(false);
     setErrorDetails("");
+    setHistorySaved(false);
 
     const formData = new FormData();
     formData.append("file", {
@@ -253,7 +314,8 @@ export default function SkinDiseaseScreen({ navigation }) {
     });
 
     try {
-      const response = await fetch(`${API_URL}/predict-skin`, {
+      // Use the new endpoint that doesn't save to history
+      const response = await fetch(`${API_URL}/predict-skin-only`, {
         method: "POST",
         body: formData,
         headers: {
@@ -287,15 +349,14 @@ export default function SkinDiseaseScreen({ navigation }) {
 
       // Successful response
       if (responseData.disease && responseData.confidence) {
+        setResult(responseData);
+        
         if (responseData.warning) {
-          setResult(responseData);
           Alert.alert(
             "Medium Confidence",
             responseData.warning,
             [{ text: "OK" }]
           );
-        } else {
-          setResult(responseData);
         }
       } else {
         setErrorMessage("Invalid response from server. Please try again.");
@@ -321,11 +382,96 @@ export default function SkinDiseaseScreen({ navigation }) {
     }
   };
 
+  const saveToHistory = async () => {
+    if (!result || !imageBase64) {
+      Alert.alert("Error", "No analysis to save");
+      return;
+    }
+
+    setSavingToHistory(true);
+
+    try {
+      const userId = await getUserId();
+      
+      // Check if user is logged in
+      if (!userId) {
+        Alert.alert(
+          "Login Required",
+          "Please log in to save analysis to your history",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Login", onPress: () => navigation.navigate("Login") }
+          ]
+        );
+        setSavingToHistory(false);
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append("user_id", userId); // This will now be the actual email
+      formData.append("image_data", imageBase64);
+      formData.append("prediction_result", JSON.stringify(result));
+
+      const response = await fetch(`${API_URL}/save-analysis-to-history`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.detail || "Failed to save to history");
+      }
+
+      if (responseData.success) {
+        setHistorySaved(true);
+        Alert.alert(
+          "Success",
+          "Analysis saved to your history",
+          [{ text: "OK" }]
+        );
+      } else {
+        throw new Error("Failed to save to history");
+      }
+      
+    } catch (error) {
+      console.error("Save to history error:", error);
+      Alert.alert(
+        "Error",
+        "Failed to save to history. Please try again."
+      );
+    } finally {
+      setSavingToHistory(false);
+    }
+  };
+
   const clearImage = () => {
     setImage(null);
+    setImageBase64(null);
     setResult(null);
+    setHistorySaved(false);
     setShowRetakeModal(false);
     setErrorDetails("");
+  };
+
+  // View History
+  const viewHistory = async () => {
+    const isLoggedIn = await checkLoginStatus();
+    if (!isLoggedIn) {
+      Alert.alert(
+        "Login Required",
+        "Please log in to view your history",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Login", onPress: () => navigation.navigate("Login") }
+        ]
+      );
+      return;
+    }
+    navigation.navigate('History');
   };
 
   // Retake Photo Modal - Enhanced with error details
@@ -407,7 +553,7 @@ export default function SkinDiseaseScreen({ navigation }) {
       {/* Retake Photo Modal */}
       <RetakePhotoModal />
       
-      {/* Header - New Design */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -418,7 +564,12 @@ export default function SkinDiseaseScreen({ navigation }) {
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Skin Disease Detection</Text>
         </View>
-        <View style={styles.historyButton} />
+        <TouchableOpacity
+          style={styles.historyButton}
+          onPress={viewHistory}
+        >
+          <Icon name="history" size={24} color={COLORS.accent} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -426,7 +577,7 @@ export default function SkinDiseaseScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image Preview - New Design */}
+        {/* Image Preview */}
         <View style={styles.imageSection}>
           {image ? (
             <View style={styles.imageContainer}>
@@ -449,7 +600,7 @@ export default function SkinDiseaseScreen({ navigation }) {
           )}
         </View>
 
-        {/* Upload Buttons - New Design */}
+        {/* Upload Buttons */}
         <View style={styles.uploadSection}>
           <TouchableOpacity
             style={styles.uploadButton}
@@ -468,7 +619,7 @@ export default function SkinDiseaseScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Analyze Button - New Design */}
+        {/* Analyze Button */}
         {image && !result && (
           <TouchableOpacity
             style={[styles.analyzeButton, loading && styles.analyzeButtonDisabled]}
@@ -495,7 +646,7 @@ export default function SkinDiseaseScreen({ navigation }) {
           </View>
         )}
 
-        {/* Results Section - New Design with Medications */}
+        {/* Results Section */}
         {result && (
           <View style={styles.resultsSection}>
             <View style={styles.resultHeader}>
@@ -529,7 +680,32 @@ export default function SkinDiseaseScreen({ navigation }) {
               medicationInfo={result.medication_info}
             />
 
-            {/* Action Buttons - New Design */}
+            {/* Save to History Button */}
+            {!historySaved ? (
+              <TouchableOpacity
+                style={styles.saveHistoryButton}
+                onPress={saveToHistory}
+                disabled={savingToHistory}
+              >
+                {savingToHistory ? (
+                  <ActivityIndicator color={COLORS.surface} size="small" />
+                ) : (
+                  <>
+                    <Icon name="save" size={20} color={COLORS.surface} />
+                    <Text style={styles.saveHistoryButtonText}>Save to History</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.historySavedIndicator}>
+                <Icon name="check-circle" size={20} color={COLORS.success} />
+                <Text style={styles.historySavedText}>
+                  Saved to history
+                </Text>
+              </View>
+            )}
+
+            {/* Action Buttons */}
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.secondaryButton}
@@ -538,9 +714,17 @@ export default function SkinDiseaseScreen({ navigation }) {
                 <Icon name="refresh" size={18} color={COLORS.accent} />
                 <Text style={styles.secondaryButtonText}>New Analysis</Text>
               </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={viewHistory}
+              >
+                <Icon name="history" size={18} color={COLORS.surface} />
+                <Text style={styles.primaryButtonText}>View History</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Disclaimer - New Design */}
+            {/* Disclaimer */}
             <View style={styles.disclaimerBox}>
               <Icon name="medical-services" size={18} color={COLORS.secondary} />
               <Text style={styles.disclaimerText}>
@@ -550,7 +734,7 @@ export default function SkinDiseaseScreen({ navigation }) {
           </View>
         )}
 
-        {/* Instructions - New Design */}
+        {/* Instructions */}
         {!image && !result && !loading && (
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsTitle}>Important Notes:</Text>
@@ -569,6 +753,14 @@ export default function SkinDiseaseScreen({ navigation }) {
             <View style={styles.instructionItem}>
               <Icon name="verified" size={16} color={COLORS.success} />
               <Text style={styles.instructionText}>Includes treatment recommendations for each condition</Text>
+            </View>
+            <View style={styles.instructionItem}>
+              <Icon name="save" size={16} color={COLORS.accent} />
+              <Text style={styles.instructionText}>Click "Save to History" to store your analysis</Text>
+            </View>
+            <View style={styles.instructionItem}>
+              <Icon name="login" size={16} color={COLORS.accent} />
+              <Text style={styles.instructionText}>Login required to save and view history</Text>
             </View>
           </View>
         )}
@@ -605,10 +797,9 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "600",
     color: COLORS.primary,
-    marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 13,
@@ -972,6 +1163,38 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     flex: 1,
     lineHeight: 18,
+  },
+  // Save to History Button
+  saveHistoryButton: {
+    backgroundColor: COLORS.accent,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  saveHistoryButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  // History Saved Indicator
+  historySavedIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(56, 142, 60, 0.1)',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  historySavedText: {
+    fontSize: 16,
+    color: COLORS.success,
+    marginLeft: 8,
+    fontWeight: '500',
   },
   // Action Buttons
   actionButtons: {

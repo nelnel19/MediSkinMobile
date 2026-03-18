@@ -1,2 +1,2 @@
 // Node.js Backend (MERN)
-export const API_URL = "http://10.219.12.186:5000";
+export const API_URL = "http://172.34.45.34:5000";

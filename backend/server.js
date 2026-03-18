@@ -5,13 +5,15 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import chatRoutes from "./routes/chat.js";
 import historyRoutes from "./routes/history.js";
-import faceRoutes from "./routes/face.js"; // This will work now
+import faceRoutes from "./routes/face.js";
 import uploadRoutes from './routes/upload.js';
+import testCloudinaryRoutes from "./routes/test-cloudinary.js"; // Add this
 
 dotenv.config();
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors());
 
 // Routes
@@ -20,6 +22,7 @@ app.use("/api", chatRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/face", faceRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/test', testCloudinaryRoutes); // Add this
 
 // Root endpoint
 app.get("/", (req, res) => {
