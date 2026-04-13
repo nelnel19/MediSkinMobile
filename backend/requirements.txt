@@ -1,10 +1,11 @@
+tensorflow==2.20.0
 fastapi==0.104.1
-uvicorn==0.24.0
-tensorflow==2.13.0
-numpy==1.24.3
+uvicorn[standard]==0.24.0
+numpy==1.26.4  # Must be >=1.26.0 for TensorFlow 2.20
 Pillow==10.0.1
 python-multipart==0.0.6
 pymongo==4.5.0
 python-dotenv==1.0.0
 cloudinary==1.36.0
-pydantic==2.4.2a
+pydantic==2.4.2
+typing-extensions==4.12.2

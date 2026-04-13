@@ -31,17 +31,14 @@ function calculateSkinGrade(skinData) {
   const darkCircleScore = skinData.skin_attributes?.dark_circle || 0;
   
   // Calculate weighted scores
-  // Acne has highest weight (40%), followed by dark spots (35%), then dark circles (25%)
   const weightedScore = (
     (acneScore * 0.4) +
     (stainScore * 0.35) +
     (darkCircleScore * 0.25)
   );
   
-  // Convert to 0-100 scale (Face++ scores are 0-100)
   const overallScore = weightedScore;
   
-  // Determine grade based on score
   let grade, description, color;
   if (overallScore <= 15) {
     grade = 'A+';
@@ -69,7 +66,6 @@ function calculateSkinGrade(skinData) {
     color = '#F44336';
   }
   
-  // Generate detailed analysis
   const strengths = [];
   const weaknesses = [];
   
@@ -98,7 +94,6 @@ function calculateSkinGrade(skinData) {
   };
 }
 
-// Get grade-specific recommendations
 function getGradeRecommendation(grade, skinData) {
   const age = parseInt(skinData.age) || 25;
   
@@ -114,30 +109,24 @@ function getGradeRecommendation(grade, skinData) {
   return recommendations[grade] || recommendations['B'];
 }
 
-// Function to generate personalized skincare recommendations
 function generateSkincareRecommendations(skinData) {
   const recommendations = [];
   
-  // Extract skin data with realistic ranges
   const acneScore = skinData.acne || 0;
   const stain = skinData.skin_attributes?.stain || 0;
   const darkCircle = skinData.skin_attributes?.dark_circle || 0;
   const age = parseInt(skinData.age) || 25;
   const skinGrade = skinData.skin_grade || null;
   
-  // More realistic thresholds
   const hasAcne = acneScore > 50;
-  const hasSevereAcne = acneScore > 75;
   const hasStains = stain > 55;
   const hasDarkCircles = darkCircle > 60;
   
-  // Determine skin type based on combination of factors
   let skinType = "Normal";
   if (acneScore > 40) skinType = "Oily";
   else if (stain > 40 && age < 30) skinType = "Combination";
   else if (age > 50) skinType = "Dry";
   
-  // Morning Routine
   const morningRoutine = [];
   
   if (skinType === "Oily") {
@@ -163,7 +152,6 @@ function generateSkincareRecommendations(skinData) {
   }
   morningRoutine.push("Mineral sunscreen SPF 30+ (last step)");
   
-  // Evening Routine
   const eveningRoutine = [];
   eveningRoutine.push("Gentle cleanser to remove sunscreen and impurities");
   
@@ -183,7 +171,6 @@ function generateSkincareRecommendations(skinData) {
     eveningRoutine.push("Hydrating night cream or gel");
   }
   
-  // Weekly Treatments
   const weeklyTreatments = [];
   
   if (hasAcne && acneScore > 60) {
@@ -201,7 +188,6 @@ function generateSkincareRecommendations(skinData) {
     weeklyTreatments.push("Your skin looks balanced - stick to basic routine");
   }
   
-  // Lifestyle Recommendations
   const lifestyleTips = [];
   lifestyleTips.push("Drink water when thirsty - no need to over-hydrate");
   
@@ -222,14 +208,12 @@ function generateSkincareRecommendations(skinData) {
   
   lifestyleTips.push("Remove makeup before sleeping - always");
   
-  // Product Focus
   let productFocus = "Basic skincare maintenance";
   if (hasAcne && acneScore > 60) productFocus = "Gentle acne management";
   else if (hasStains && stain > 70) productFocus = "Targeted brightening";
   else if (hasDarkCircles) productFocus = "Eye area care";
   else if (age > 45) productFocus = "Hydration and gentle anti-aging";
   
-  // Severity assessment
   let acneSeverity = "low";
   if (acneScore > 75) acneSeverity = "moderate (consider dermatologist)";
   else if (acneScore > 60) acneSeverity = "mild";
@@ -256,7 +240,6 @@ function generateSkincareRecommendations(skinData) {
   };
 }
 
-// Function to map Face++ skin tone value (0-4) to readable format
 function mapSkinTone(toneValue) {
   const toneMap = {
     0: { value: 0, name: "Fair / Light", description: "Very fair skin that burns easily", hex: "#F8E8D0" },
@@ -270,6 +253,308 @@ function mapSkinTone(toneValue) {
   const validTone = Math.max(0, Math.min(4, tone));
   
   return toneMap[validTone] || toneMap[1];
+}
+
+// NEW MULTI-ANGLE ANALYSIS ENDPOINT
+router.post('/analyze/multi-angle', upload.fields([
+  { name: 'file1', maxCount: 1 },
+  { name: 'file2', maxCount: 1 },
+  { name: 'file3', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const files = req.files;
+    
+    if (!files || Object.keys(files).length === 0) {
+      return res.status(400).json({ 
+        error: "NO_IMAGES",
+        message: "Please upload 3 photos (left, center, right views)."
+      });
+    }
+
+    const positions = ['file1', 'file2', 'file3'];
+    const analysisResults = [];
+    
+    console.log(`\n=== MULTI-ANGLE ANALYSIS REQUEST ===`);
+    console.log(`Analyzing ${Object.keys(files).length} photos...`);
+    
+    // Analyze each photo
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+      const file = files[position]?.[0];
+      
+      if (!file) {
+        console.log(`⚠️ Missing photo for position ${position}`);
+        continue;
+      }
+      
+      console.log(`\n📸 Analyzing photo ${i + 1}/3...`);
+      
+      const imgBuffer = file.buffer;
+      const timestamp = Date.now();
+      
+      try {
+        const formData = new FormData();
+        formData.append('api_key', FACEPP_API_KEY || '');
+        formData.append('api_secret', FACEPP_API_SECRET || '');
+        formData.append('return_attributes', 'gender,age,skinstatus,facequality,blur');
+        formData.append('image_file', imgBuffer, {
+          filename: `face_${position}_${timestamp}.jpg`,
+          contentType: file.mimetype || 'image/jpeg'
+        });
+        
+        const response = await axios.post('https://api-us.faceplusplus.com/facepp/v3/detect', formData, {
+          headers: formData.getHeaders(),
+          timeout: 30000
+        });
+        
+        const apiResult = response.data;
+        
+        if (!apiResult.faces || apiResult.faces.length === 0) {
+          return res.status(400).json({ 
+            error: "NO_FACE_DETECTED",
+            message: `No face detected in ${getPositionName(position)} photo. Please ensure all photos clearly show your face.`,
+            position: position
+          });
+        }
+        
+        const faceData = apiResult.faces[0];
+        const attrs = faceData.attributes || {};
+        
+        const rawSkinTone = attrs.skinstatus?.skin_tone;
+        const skinToneValue = typeof rawSkinTone === 'number' ? rawSkinTone : 
+                             (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
+        
+        analysisResults.push({
+          position: position,
+          positionName: getPositionName(position),
+          result: {
+            age: attrs.age?.value || "Unknown",
+            gender: attrs.gender?.value || "Unknown",
+            acne: Math.round((attrs.skinstatus?.acne || 0) * 10) / 10,
+            stain: Math.round((attrs.skinstatus?.stain || 0) * 10) / 10,
+            dark_circle: Math.round((attrs.skinstatus?.dark_circle || 0) * 10) / 10,
+            skin_tone: {
+              raw_value: skinToneValue,
+              ...mapSkinTone(skinToneValue)
+            },
+            face_quality: attrs.facequality?.value || 0,
+            blur: attrs.blur?.blurness?.value || 0,
+            confidence: faceData.confidence || 0
+          }
+        });
+        
+        console.log(`  ✅ ${getPositionName(position)} analyzed - Age: ${attrs.age?.value}, Acne: ${Math.round((attrs.skinstatus?.acne || 0) * 10) / 10}`);
+        
+      } catch (error) {
+        console.error(`  ❌ Error analyzing ${getPositionName(position)}:`, error.message);
+        return res.status(400).json({
+          error: "ANALYSIS_FAILED",
+          message: `Failed to analyze ${getPositionName(position)} photo. Please try again.`,
+          details: error.message
+        });
+      }
+    }
+    
+    if (analysisResults.length < 3) {
+      return res.status(400).json({
+        error: "INCOMPLETE_ANALYSIS",
+        message: "All 3 photos are required for complete analysis."
+      });
+    }
+    
+    // Combine results from all angles
+    console.log(`\n📊 Combining results from ${analysisResults.length} angles...`);
+    const combinedResult = combineMultiAngleResults(analysisResults);
+    
+    console.log(`✅ Multi-angle analysis complete!`);
+    console.log(`   Skin Grade: ${combinedResult.skin_grade.grade} (${combinedResult.skin_grade.overall_score})`);
+    console.log(`   Confidence: High (multi-angle verification)`);
+    
+    res.json(combinedResult);
+    
+  } catch (error) {
+    console.error('Multi-angle analysis error:', error);
+    res.status(500).json({
+      error: "SERVER_ERROR",
+      message: "An unexpected error occurred during multi-angle analysis.",
+      details: error.message
+    });
+  }
+});
+
+// Helper function to get position name
+function getPositionName(position) {
+  const names = {
+    'file1': 'Left Side',
+    'file2': 'Front',
+    'file3': 'Right Side'
+  };
+  return names[position] || 'Unknown';
+}
+
+// Combine results from multiple angles
+function combineMultiAngleResults(analysisResults) {
+  // Find front-facing result for primary data
+  const frontResult = analysisResults.find(r => r.position === 'file2')?.result || analysisResults[0]?.result;
+  
+  // Calculate average scores across all angles
+  const avgAcne = Math.round(analysisResults.reduce((sum, r) => sum + r.result.acne, 0) / analysisResults.length * 10) / 10;
+  const avgStain = Math.round(analysisResults.reduce((sum, r) => sum + r.result.stain, 0) / analysisResults.length * 10) / 10;
+  const avgDarkCircle = Math.round(analysisResults.reduce((sum, r) => sum + r.result.dark_circle, 0) / analysisResults.length * 10) / 10;
+  
+  // Find most common age and gender
+  const ages = analysisResults.map(r => r.result.age).filter(a => a !== "Unknown");
+  const mostCommonAge = ages.length > 0 ? getMostCommonValue(ages) : "Unknown";
+  
+  const genders = analysisResults.map(r => r.result.gender).filter(g => g !== "Unknown");
+  const mostCommonGender = genders.length > 0 ? getMostCommonValue(genders) : "Unknown";
+  
+  // Use front-facing skin tone or most common
+  const skinToneValues = analysisResults.map(r => r.result.skin_tone);
+  const primarySkinTone = frontResult.skin_tone || skinToneValues[0];
+  
+  // Calculate skin grade with averaged scores
+  const skinGrade = calculateSkinGrade({
+    acne: avgAcne,
+    skin_attributes: {
+      stain: avgStain,
+      dark_circle: avgDarkCircle,
+      acne: avgAcne,
+      skin_tone: primarySkinTone
+    },
+    age: mostCommonAge !== "Unknown" ? mostCommonAge : 25
+  });
+  
+  // Calculate overall image quality
+  const avgFaceQuality = Math.round(analysisResults.reduce((sum, r) => sum + (r.result.face_quality || 0), 0) / analysisResults.length);
+  const avgBlur = Math.round(analysisResults.reduce((sum, r) => sum + (r.result.blur || 0), 0) / analysisResults.length);
+  
+  // Generate enhanced recommendations for multi-angle analysis
+  const recommendations = generateMultiAngleRecommendations({
+    acne: avgAcne,
+    stain: avgStain,
+    dark_circle: avgDarkCircle,
+    age: mostCommonAge !== "Unknown" ? mostCommonAge : 25,
+    skin_grade: skinGrade,
+    analysisResults: analysisResults
+  });
+  
+  return {
+    age: mostCommonAge,
+    gender: mostCommonGender,
+    acne: avgAcne,
+    skin_attributes: {
+      stain: avgStain,
+      dark_circle: avgDarkCircle,
+      acne: avgAcne,
+      skin_tone: primarySkinTone
+    },
+    skin_grade: skinGrade,
+    image_quality: {
+      blur: avgBlur,
+      face_quality: avgFaceQuality,
+      passed: avgFaceQuality > 50 && avgBlur < 50,
+      multi_angle: true,
+      angles_analyzed: analysisResults.length
+    },
+    skincare_recommendations: recommendations,
+    timestamp: Date.now(),
+    face_count: analysisResults.length,
+    api_used: "Face++ Multi-Angle Analysis",
+    face_detected: true,
+    face_confidence: Math.round(analysisResults.reduce((sum, r) => sum + (r.result.confidence || 0), 0) / analysisResults.length * 100) / 100,
+    multi_angle_data: {
+      angles_analyzed: analysisResults.map(r => ({
+        position: r.positionName,
+        acne: r.result.acne,
+        stain: r.result.stain,
+        dark_circle: r.result.dark_circle
+      })),
+      consistency: calculateConsistencyScore(analysisResults)
+    }
+  };
+}
+
+// Helper function to get most common value
+function getMostCommonValue(arr) {
+  const frequency = {};
+  let maxFreq = 0;
+  let mostCommon = arr[0];
+  
+  for (const item of arr) {
+    frequency[item] = (frequency[item] || 0) + 1;
+    if (frequency[item] > maxFreq) {
+      maxFreq = frequency[item];
+      mostCommon = item;
+    }
+  }
+  
+  return mostCommon;
+}
+
+// Calculate consistency score across angles
+function calculateConsistencyScore(results) {
+  const acneValues = results.map(r => r.result.acne);
+  const stainValues = results.map(r => r.result.stain);
+  const darkCircleValues = results.map(r => r.result.dark_circle);
+  
+  const calculateVariance = (values) => {
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    return variance;
+  };
+  
+  const acneVariance = calculateVariance(acneValues);
+  const stainVariance = calculateVariance(stainValues);
+  const darkCircleVariance = calculateVariance(darkCircleValues);
+  
+  const totalVariance = (acneVariance + stainVariance + darkCircleVariance) / 3;
+  const consistencyScore = Math.max(0, Math.min(100, 100 - (totalVariance * 2)));
+  
+  let consistencyLevel = "High";
+  if (consistencyScore < 60) consistencyLevel = "Low";
+  else if (consistencyScore < 80) consistencyLevel = "Medium";
+  
+  return {
+    score: Math.round(consistencyScore),
+    level: consistencyLevel,
+    note: consistencyLevel === "High" ? "Results are consistent across all angles" :
+           consistencyLevel === "Medium" ? "Some variation detected between angles" :
+           "Significant variation detected - consider retaking photos"
+  };
+}
+
+// Enhanced recommendations for multi-angle analysis
+function generateMultiAngleRecommendations(skinData) {
+  const baseRecommendations = generateSkincareRecommendations(skinData);
+  
+  // Add multi-angle specific insights
+  const acneVariation = calculateVariation(skinData.analysisResults, 'acne');
+  const stainVariation = calculateVariation(skinData.analysisResults, 'stain');
+  
+  if (acneVariation > 30) {
+    baseRecommendations.key_recommendations.unshift(
+      "Acne appears unevenly distributed - focus treatment on specific areas rather than whole face"
+    );
+  }
+  
+  if (stainVariation > 30) {
+    baseRecommendations.key_recommendations.unshift(
+      "Pigmentation varies across your face - consider spot treatment for darker areas"
+    );
+  }
+  
+  baseRecommendations.summary = `Multi-angle analysis (${skinData.analysisResults.length} views) shows ${baseRecommendations.summary.toLowerCase()}`;
+  baseRecommendations.multi_angle_insight = "Analysis performed from multiple angles for more accurate results";
+  
+  return baseRecommendations;
+}
+
+function calculateVariation(results, attribute) {
+  const values = results.map(r => r.result[attribute]);
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+  return Math.sqrt(variance);
 }
 
 // Main analysis endpoint
@@ -301,51 +586,34 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
     }
     
     console.log(`\n=== FACE++ ANALYSIS REQUEST ===`);
-    console.log('API Key configured:', !!FACEPP_API_KEY);
-    console.log('API Secret configured:', !!FACEPP_API_SECRET);
     
     try {
-      // Call Face++ API
-      console.log('Calling Face++ API with skin attributes...');
-      
       const formData = new FormData();
       formData.append('api_key', FACEPP_API_KEY || '');
       formData.append('api_secret', FACEPP_API_SECRET || '');
-      
       formData.append('return_attributes', 'gender,age,skinstatus,facequality,blur');
-      
       formData.append('image_file', imgBuffer, {
         filename: `face_${timestamp}.jpg`,
         contentType: req.file.mimetype || 'image/jpeg'
       });
       
-      console.log('Sending request to Face++...');
-      
       const response = await axios.post('https://api-us.faceplusplus.com/facepp/v3/detect', formData, {
-        headers: {
-          ...formData.getHeaders(),
-        },
+        headers: formData.getHeaders(),
         timeout: 30000
       });
 
       const apiResult = response.data;
 
-      // Check if face is detected
       if (!apiResult.faces || apiResult.faces.length === 0) {
-        console.log('❌ No face detected in the image');
         return res.status(400).json({ 
           error: "NO_FACE_DETECTED",
-          message: "No face detected in the image. Please upload a clear photo of your face.",
-          details: "The AI could not detect a human face in the uploaded image."
+          message: "No face detected in the image. Please upload a clear photo of your face."
         });
       }
 
       const faceData = apiResult.faces[0];
       const attrs = faceData.attributes || {};
       
-      console.log('Face++ Raw Response Received - Face detected');
-      
-      // Extract data from Face++
       const rawSkinTone = attrs.skinstatus?.skin_tone;
       const skinToneValue = typeof rawSkinTone === 'number' ? rawSkinTone : 
                            (rawSkinTone !== undefined ? parseInt(rawSkinTone) : 1);
@@ -360,7 +628,6 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
         }
       };
       
-      // Calculate skin grade
       const skinGrade = calculateSkinGrade({
         acne: skinAttributes.acne,
         skin_attributes: skinAttributes,
@@ -391,16 +658,12 @@ router.post('/analyze/skin', upload.single('file'), async (req, res) => {
         face_confidence: faceData.confidence || 0.9
       };
 
-      // Cache result
       sessionCache.set(imageHash, {
         result: result,
         timestamp: now
       });
       
-      console.log(`✓ Real Face++ Analysis Complete:`);
-      console.log(`  Age: ${result.age}, Gender: ${result.gender}`);
-      console.log(`  Acne Score: ${result.acne}`);
-      console.log(`  Skin Grade: ${result.skin_grade.grade} (${result.skin_grade.description})`);
+      console.log(`✓ Analysis Complete: Age: ${result.age}, Acne: ${result.acne}, Grade: ${result.skin_grade.grade}`);
       
       res.json(result);
 
@@ -442,14 +705,10 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
     const imgBuffer = req.file.buffer;
     const timestamp = Date.now();
     
-    console.log('Calling Face++ API with basic attributes...');
-    
     const formData = new FormData();
     formData.append('api_key', FACEPP_API_KEY || '');
     formData.append('api_secret', FACEPP_API_SECRET || '');
-    
     formData.append('return_attributes', 'gender,age,skinstatus');
-    
     formData.append('image_file', imgBuffer, {
       filename: `face_${timestamp}.jpg`,
       contentType: req.file.mimetype || 'image/jpeg'
@@ -486,7 +745,6 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
       }
     };
     
-    // Calculate skin grade
     const skinGrade = calculateSkinGrade({
       acne: skinAttributes.acne,
       skin_attributes: skinAttributes,
@@ -499,9 +757,7 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
       acne: skinAttributes.acne,
       skin_attributes: skinAttributes,
       skin_grade: skinGrade,
-      image_quality: { 
-        passed: true
-      },
+      image_quality: { passed: true },
       skincare_recommendations: generateSkincareRecommendations({
         acne: skinAttributes.acne,
         skin_attributes: skinAttributes,
@@ -531,12 +787,6 @@ router.post('/analyze/basic', upload.single('file'), async (req, res) => {
 // TEST ENDPOINT
 router.post('/analyze/test', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "NO_IMAGE" });
-    }
-
-    const timestamp = Date.now();
-    
     const testResult = {
       age: "28",
       gender: "Female",
@@ -601,7 +851,7 @@ router.post('/analyze/test', upload.single('file'), async (req, res) => {
         },
         confidence_note: "These are AI-generated suggestions based on visual analysis. For medical concerns, please consult a dermatologist."
       },
-      timestamp: timestamp,
+      timestamp: Date.now(),
       face_count: 1,
       api_used: "Test Data",
       face_detected: true,
@@ -687,6 +937,7 @@ router.get('/health', (req, res) => {
     endpoints: [
       "POST /analyze/skin - Face analysis with skincare recommendations",
       "POST /analyze/basic - Basic analysis with recommendations",
+      "POST /analyze/multi-angle - Multi-angle analysis (3 photos)",
       "POST /analyze/test - Test data with recommendations",
       "GET /test-api - Test API connection",
       "GET /clear-cache - Clear session cache",

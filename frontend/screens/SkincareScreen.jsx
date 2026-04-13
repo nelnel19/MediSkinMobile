@@ -36,8 +36,16 @@ const USER_EMAIL_KEY = "user_email";
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IDEAL_DISTANCE = "30-50"; // cm
 
+// Photo capture positions
+const PHOTO_POSITIONS = [
+  { id: 'left', name: 'Left Side', angle: '45° Left', icon: 'rotate-left', instruction: 'Turn face slightly to the left' },
+  { id: 'center', name: 'Front', angle: '0°', icon: 'camera-front', instruction: 'Look straight at camera' },
+  { id: 'right', name: 'Right Side', angle: '45° Right', icon: 'rotate-right', instruction: 'Turn face slightly to the right' }
+];
+
 export default function SkincareScreen({ navigation }) {
-  const [image, setImage] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [currentPosition, setCurrentPosition] = useState(0);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,6 +58,7 @@ export default function SkincareScreen({ navigation }) {
   const [cameraQuality, setCameraQuality] = useState(null);
   const [showQualityWarning, setShowQualityWarning] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(null);
+  const [tempPhoto, setTempPhoto] = useState(null);
 
   useEffect(() => {
     loadUserEmail();
@@ -108,92 +117,64 @@ export default function SkincareScreen({ navigation }) {
     return COLORS.error;
   };
 
-  // COMPLETE UPDATED SAVE TO HISTORY FUNCTION WITH CLOUDINARY
+  // Save to history with multiple photos
   const saveToHistory = async () => {
     try {
-      if (!result || !image || !userEmail) {
+      if (!result || !photos.length || !userEmail) {
         Alert.alert("Error", "Cannot save analysis. Missing data.");
         return;
       }
 
       setSaving(true);
       console.log("========== STARTING SAVE PROCESS ==========");
-      console.log("1. Local image URI:", image);
-      console.log("2. User email:", userEmail);
-      console.log("3. API URL:", `${API_URL}/api/upload/skin-analysis`);
-
-      // Step 1: Upload image to Cloudinary
-      const formData = new FormData();
-      formData.append('image', {
-        uri: image,
-        type: 'image/jpeg',
-        name: `face_${Date.now()}.jpg`,
-      });
-
-      console.log("4. Uploading to Cloudinary...");
-      console.log("FormData prepared with image:", {
-        uri: image.substring(0, 50) + "...",
-        type: 'image/jpeg',
-        name: `face_${Date.now()}.jpg`
-      });
       
-      const uploadResponse = await axios.post(
-        `${API_URL}/api/upload/skin-analysis`,
-        formData,
-        {
-          headers: { 
-            'Content-Type': 'multipart/form-data',
-          },
-          timeout: 30000
+      // Upload all photos to Cloudinary
+      const uploadedUrls = [];
+      
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        console.log(`Uploading photo ${i + 1}/${photos.length}...`);
+        
+        const formData = new FormData();
+        formData.append('image', {
+          uri: photo.uri,
+          type: 'image/jpeg',
+          name: `face_${photo.position}_${Date.now()}.jpg`,
+        });
+
+        const uploadResponse = await axios.post(
+          `${API_URL}/api/upload/skin-analysis`,
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 30000
+          }
+        );
+
+        if (!uploadResponse.data.success) {
+          throw new Error(uploadResponse.data.message || `Failed to upload ${photo.position} photo`);
         }
-      );
 
-      console.log("5. Upload response received:");
-      console.log("   Status:", uploadResponse.status);
-      console.log("   Data:", uploadResponse.data);
-
-      if (!uploadResponse.data.success) {
-        console.error("Upload failed - server returned success: false");
-        console.error("Error message:", uploadResponse.data.message);
-        throw new Error(uploadResponse.data.message || 'Failed to upload image');
+        uploadedUrls.push({
+          position: photo.position,
+          url: uploadResponse.data.imageUrl,
+          timestamp: Date.now()
+        });
       }
 
-      const cloudinaryUrl = uploadResponse.data.imageUrl;
-      
-      if (!cloudinaryUrl) {
-        console.error("Upload response missing imageUrl!");
-        throw new Error('No image URL returned from server');
-      }
-      
-      console.log('6. ✅ Image uploaded to Cloudinary successfully!');
-      console.log('   Cloudinary URL:', cloudinaryUrl);
+      console.log('✅ All photos uploaded to Cloudinary successfully!');
 
-      // Step 2: Save analysis with Cloudinary URL
+      // Save analysis with multiple photos
       const saveData = {
         userEmail,
-        imageUrl: cloudinaryUrl,
+        images: uploadedUrls,
         analysisResult: {
-          age: result.age || "Unknown",
-          gender: result.gender || "Unknown",
-          acne: result.acne || 0,
-          skin_attributes: result.skin_attributes || {},
-          skin_grade: result.skin_grade || null,
-          image_quality: result.image_quality || {},
-          skincare_recommendations: result.skincare_recommendations || {},
-          timestamp: result.timestamp || Date.now(),
-          face_count: result.face_count || 1,
-          api_used: result.api_used || "Face++ AI",
-          face_detected: result.face_detected || true,
-          face_confidence: result.face_confidence || 0.9
+          ...result,
+          photos_count: photos.length,
+          positions_captured: photos.map(p => p.position),
+          timestamp: Date.now()
         }
       };
-
-      console.log("7. Saving analysis to history with Cloudinary URL...");
-      console.log("   Save data prepared:", {
-        userEmail: saveData.userEmail,
-        imageUrl: saveData.imageUrl.substring(0, 50) + "...",
-        hasAnalysisResult: !!saveData.analysisResult
-      });
 
       const saveResponse = await axios.post(
         `${API_URL}/api/history/save-analysis`,
@@ -204,15 +185,10 @@ export default function SkincareScreen({ navigation }) {
         }
       );
 
-      console.log("8. Save response received:");
-      console.log("   Status:", saveResponse.status);
-      console.log("   Data:", saveResponse.data);
-
       if (saveResponse.data.success) {
-        console.log("9. ✅ Analysis saved successfully!");
         Alert.alert(
           "✅ Saved Successfully",
-          "Your analysis has been saved to history and images are backed up to the cloud.",
+          "Your multi-angle analysis has been saved to history!",
           [
             { 
               text: "View History", 
@@ -224,44 +200,13 @@ export default function SkincareScreen({ navigation }) {
           ]
         );
       } else {
-        console.error("Save failed - server returned success: false");
-        console.error("Error message:", saveResponse.data.message);
         Alert.alert("Error", saveResponse.data.message || "Failed to save analysis.");
       }
 
     } catch (error) {
-      console.error("========== ERROR IN SAVE PROCESS ==========");
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      
-      if (error.response) {
-        console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-        console.error("Error response headers:", error.response.headers);
-      } else if (error.request) {
-        console.error("Error request:", error.request);
-        console.error("No response received from server");
-      } else {
-        console.error("Error setting up request:", error.message);
-      }
-      
-      console.error("Error config:", error.config);
-
-      let errorMessage = "Failed to save analysis. ";
-
-      if (error.code === 'ECONNABORTED') {
-        errorMessage += "The request timed out. Please check your internet connection.";
-      } else if (error.response) {
-        errorMessage += error.response.data.message || `Server error: ${error.response.status}`;
-      } else if (error.request) {
-        errorMessage += "Could not connect to server. Please check your internet connection.";
-      } else {
-        errorMessage += error.message;
-      }
-
-      Alert.alert("Error", errorMessage);
+      console.error("Error in save process:", error);
+      Alert.alert("Error", "Failed to save analysis. Please try again.");
     } finally {
-      console.log("========== SAVE PROCESS COMPLETED ==========");
       setSaving(false);
     }
   };
@@ -270,10 +215,9 @@ export default function SkincareScreen({ navigation }) {
     navigation.navigate('History');
   };
 
-  // Camera Screen Component
+  // Camera Screen Component for multi-photo capture
   const CameraScreen = () => {
-    const [distanceFeedback] = useState('Position face in oval');
-    const [facePosition] = useState('center');
+    const [facePosition, setFacePosition] = useState('center');
 
     const takePicture = async () => {
       if (isTakingPhoto) return;
@@ -288,8 +232,40 @@ export default function SkincareScreen({ navigation }) {
         });
 
         if (!result.canceled) {
-          setImage(result.assets[0].uri);
-          setShowCamera(false);
+          const newPhoto = {
+            id: Date.now(),
+            uri: result.assets[0].uri,
+            position: PHOTO_POSITIONS[currentPosition].id,
+            positionName: PHOTO_POSITIONS[currentPosition].name,
+            timestamp: Date.now()
+          };
+          
+          setTempPhoto(newPhoto);
+          
+          // Show preview and ask for confirmation
+          Alert.alert(
+            "Review Photo",
+            `Is this a good photo for ${PHOTO_POSITIONS[currentPosition].name} view?`,
+            [
+              { text: "Retake", style: "cancel", onPress: () => setTempPhoto(null) },
+              { 
+                text: "Accept", 
+                onPress: () => {
+                  const updatedPhotos = [...photos, newPhoto];
+                  setPhotos(updatedPhotos);
+                  setTempPhoto(null);
+                  
+                  if (currentPosition + 1 < PHOTO_POSITIONS.length) {
+                    setCurrentPosition(currentPosition + 1);
+                  } else {
+                    setShowCamera(false);
+                    // All photos taken, analyze ONLY the front photo
+                    setTimeout(() => analyzeFrontPhoto(updatedPhotos), 500);
+                  }
+                }
+              }
+            ]
+          );
         }
       } catch (error) {
         Alert.alert("Error", "Could not take photo. Please try again.");
@@ -302,6 +278,19 @@ export default function SkincareScreen({ navigation }) {
       setCameraType(cameraType === 'front' ? 'back' : 'front');
     };
 
+    const skipToNext = () => {
+      if (currentPosition + 1 < PHOTO_POSITIONS.length) {
+        setCurrentPosition(currentPosition + 1);
+      } else if (photos.length > 0) {
+        setShowCamera(false);
+        analyzeFrontPhoto(photos);
+      }
+    };
+
+    const currentPositionInfo = PHOTO_POSITIONS[currentPosition];
+    const photosTaken = photos.length;
+    const totalPhotos = PHOTO_POSITIONS.length;
+
     return (
       <View style={styles.cameraContainer}>
         <View style={styles.cameraPreview}>
@@ -313,11 +302,28 @@ export default function SkincareScreen({ navigation }) {
                   <Text style={styles.qualityText}>{cameraQuality.label}</Text>
                   <Text style={styles.qualityResolutionText}>{cameraQuality.resolution}</Text>
                 </View>
-                <Text style={styles.qualityNote}>
-                  {cameraQuality.isEstimated ? 'Estimated quality' : 'Camera quality'}
-                </Text>
               </View>
             )}
+
+            {/* Progress indicator */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${(photosTaken / totalPhotos) * 100}%` }]} />
+              </View>
+              <Text style={styles.progressText}>
+                Photo {photosTaken + 1} of {totalPhotos}
+              </Text>
+            </View>
+
+            {/* Position instruction */}
+            <View style={styles.positionInstructionCard}>
+              <Icon name={currentPositionInfo.icon} size={24} color={COLORS.accent} />
+              <View style={styles.positionInstructionText}>
+                <Text style={styles.positionName}>{currentPositionInfo.name}</Text>
+                <Text style={styles.positionAngle}>{currentPositionInfo.angle}</Text>
+              </View>
+              <Text style={styles.positionInstruction}>{currentPositionInfo.instruction}</Text>
+            </View>
 
             <View style={styles.faceGuideContainer}>
               <View style={styles.faceOval} />
@@ -333,56 +339,59 @@ export default function SkincareScreen({ navigation }) {
             </View>
 
             <View style={styles.distanceGuidanceContainer}>
-              <View style={[
-                styles.distanceGuidance,
-                distanceFeedback.includes('Perfect') && styles.distancePerfect,
-                distanceFeedback.includes('close') && styles.distanceTooClose,
-                distanceFeedback.includes('far') && styles.distanceTooFar,
-              ]}>
-                <Icon 
-                  name={
-                    distanceFeedback.includes('Perfect') ? 'check-circle' :
-                    distanceFeedback.includes('close') ? 'warning' :
-                    distanceFeedback.includes('far') ? 'zoom-out-map' : 'info'
-                  } 
-                  size={20} 
-                  color={
-                    distanceFeedback.includes('Perfect') ? COLORS.success :
-                    distanceFeedback.includes('close') ? COLORS.error :
-                    distanceFeedback.includes('far') ? COLORS.warning : COLORS.accent
-                  } 
-                />
-                <Text style={styles.distanceText}>{distanceFeedback}</Text>
-              </View>
-              
-              <View style={styles.distanceInfoCard}>
-                <Icon name="straighten" size={16} color={COLORS.accent} />
-                <Text style={styles.distanceInfoText}>
-                  Ideal distance: {IDEAL_DISTANCE}cm from phone
+              <View style={styles.distanceGuidance}>
+                <Icon name="straighten" size={20} color={COLORS.accent} />
+                <Text style={styles.distanceText}>
+                  Hold phone {IDEAL_DISTANCE}cm from face
                 </Text>
               </View>
             </View>
 
-            <View style={styles.alignmentTipsContainer}>
-              <View style={styles.alignmentTip}>
-                <Icon name="brightness-5" size={14} color={COLORS.warning} />
-                <Text style={styles.alignmentTipText}>Good lighting</Text>
+            {/* Thumbnail preview of taken photos */}
+            {photos.length > 0 && (
+              <View style={styles.thumbnailStrip}>
+                {photos.map((photo, index) => (
+                  <View key={photo.id} style={styles.thumbnailContainer}>
+                    <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
+                    <View style={styles.thumbnailBadge}>
+                      <Icon name="check-circle" size={12} color={COLORS.success} />
+                    </View>
+                  </View>
+                ))}
+                {Array(totalPhotos - photos.length).fill().map((_, index) => (
+                  <View key={`empty-${index}`} style={[styles.thumbnail, styles.emptyThumbnail]}>
+                    <Icon name="photo-camera" size={16} color={COLORS.secondary} />
+                  </View>
+                ))}
               </View>
-              <View style={styles.alignmentTip}>
-                <Icon name="center-focus-strong" size={14} color={COLORS.warning} />
-                <Text style={styles.alignmentTipText}>Center face</Text>
-              </View>
-              <View style={styles.alignmentTip}>
-                <Icon name="remove-red-eye" size={14} color={COLORS.warning} />
-                <Text style={styles.alignmentTipText}>Look at camera</Text>
-              </View>
-            </View>
+            )}
           </View>
         </View>
         
         <View style={styles.cameraControlsOverlay}>
           <View style={styles.topControls}>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setShowCamera(false)}>
+            <TouchableOpacity style={styles.controlButton} onPress={() => {
+              if (photos.length > 0) {
+                Alert.alert(
+                  "Cancel Capture",
+                  "Are you sure? Your captured photos will be lost.",
+                  [
+                    { text: "Continue Capturing", style: "cancel" },
+                    { 
+                      text: "Cancel & Reset", 
+                      style: "destructive",
+                      onPress: () => {
+                        setPhotos([]);
+                        setCurrentPosition(0);
+                        setShowCamera(false);
+                      }
+                    }
+                  ]
+                );
+              } else {
+                setShowCamera(false);
+              }
+            }}>
               <Icon name="close" size={28} color={COLORS.surface} />
             </TouchableOpacity>
             
@@ -406,8 +415,15 @@ export default function SkincareScreen({ navigation }) {
                   )}
                 </View>
               </TouchableOpacity>
-              <Text style={styles.captureHint}>Tap to capture photo</Text>
+              <Text style={styles.captureHint}>Tap to capture</Text>
             </View>
+            
+            {photos.length > 0 && (
+              <TouchableOpacity style={styles.skipButton} onPress={skipToNext}>
+                <Text style={styles.skipButtonText}>Skip & Continue</Text>
+                <Icon name="arrow-forward" size={16} color={COLORS.accent} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -426,9 +442,7 @@ export default function SkincareScreen({ navigation }) {
               
               <Text style={styles.modalMessage}>
                 Your front camera quality is estimated at {cameraQuality?.label} ({cameraQuality?.resolution}).
-                {cameraQuality?.megapixels < 8 ? 
-                  ' For best results, ensure good lighting and hold the phone steady.' : 
-                  ' This should provide good results for face analysis.'}
+                For best results with multi-angle analysis, ensure good lighting.
               </Text>
               
               <View style={styles.modalButtons}>
@@ -446,6 +460,142 @@ export default function SkincareScreen({ navigation }) {
     );
   };
 
+  // Analyze ONLY the front-facing photo (center position)
+  const analyzeFrontPhoto = async (allPhotos) => {
+    // Find the front/center photo
+    const frontPhoto = allPhotos.find(photo => photo.position === 'center');
+    
+    if (!frontPhoto) {
+      Alert.alert("Error", "Front-facing photo is missing. Please retake the photos.");
+      setShowCamera(true);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const formData = new FormData();
+      formData.append("file", {
+        uri: frontPhoto.uri,
+        name: `face_front_${Date.now()}.jpg`,
+        type: "image/jpeg",
+      });
+
+      // Use the existing working endpoint
+      const response = await axios.post(
+        `${API_URL}/api/face/analyze/skin`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 20000,
+        }
+      );
+      
+      if (response.data.error === "NO_FACE_DETECTED") {
+        setErrorMessage(response.data.message || "No face detected in the front-facing photo.");
+        setShowRetakeModal(true);
+      } else {
+        // Add multi-angle metadata to the result
+        const enhancedResult = {
+          ...response.data,
+          multi_angle_info: {
+            photos_taken: allPhotos.length,
+            angles_captured: allPhotos.map(p => p.positionName),
+            analysis_based_on: "Front-facing photo",
+            note: "Side photos are for reference only. Analysis based on front view."
+          }
+        };
+        setResult(enhancedResult);
+        console.log("Analysis complete based on front-facing photo:", enhancedResult);
+      }
+      
+    } catch (error) {
+      console.error("Analysis error:", error);
+      
+      if (error.response?.data?.error === "NO_FACE_DETECTED") {
+        setErrorMessage(error.response.data.message || "No face detected in the front-facing photo.");
+        setShowRetakeModal(true);
+      } else {
+        Alert.alert("Error", "Failed to analyze photo. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNewSession = () => {
+    setPhotos([]);
+    setCurrentPosition(0);
+    setResult(null);
+    setShowRetakeModal(false);
+    setErrorMessage("");
+  };
+
+  const pickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Please allow gallery access.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+
+      if (!result.canceled) {
+        // For gallery, use single photo mode
+        const singlePhoto = {
+          id: Date.now(),
+          uri: result.assets[0].uri,
+          position: 'center',
+          positionName: 'Front (Gallery)',
+          timestamp: Date.now()
+        };
+        setPhotos([singlePhoto]);
+        analyzeSinglePhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not select image. Please try again.");
+    }
+  };
+
+  const analyzeSinglePhoto = async (imageUri) => {
+    try {
+      setLoading(true);
+      
+      const formData = new FormData();
+      formData.append("file", {
+        uri: imageUri,
+        name: `face_${Date.now()}.jpg`,
+        type: "image/jpeg",
+      });
+
+      const response = await axios.post(
+        `${API_URL}/api/face/analyze/skin`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 20000,
+        }
+      );
+      
+      if (response.data.error === "NO_FACE_DETECTED") {
+        setErrorMessage(response.data.message || "No face detected in the image.");
+        setShowRetakeModal(true);
+      } else {
+        setResult(response.data);
+      }
+      
+    } catch (error) {
+      Alert.alert("Error", "Failed to analyze image. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Retake Photo Modal
   const RetakePhotoModal = () => (
     <Modal
@@ -458,7 +608,7 @@ export default function SkincareScreen({ navigation }) {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Icon name="error-outline" size={40} color={COLORS.error} />
-            <Text style={styles.modalTitle}>No Face Detected</Text>
+            <Text style={styles.modalTitle}>Photo Issue Detected</Text>
           </View>
           
           <Text style={styles.modalMessage}>{errorMessage}</Text>
@@ -486,12 +636,9 @@ export default function SkincareScreen({ navigation }) {
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={styles.modalSecondaryButton}
-              onPress={() => {
-                setShowRetakeModal(false);
-                resetAnalysis();
-              }}
+              onPress={startNewSession}
             >
-              <Text style={styles.modalSecondaryButtonText}>Cancel</Text>
+              <Text style={styles.modalSecondaryButtonText}>Start Over</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -501,122 +648,13 @@ export default function SkincareScreen({ navigation }) {
                 setShowCamera(true);
               }}
             >
-              <Text style={styles.modalPrimaryButtonText}>Retake Photo</Text>
+              <Text style={styles.modalPrimaryButtonText}>Retake Photos</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
   );
-
-  const pickImage = async (fromCamera = false) => {
-    try {
-      if (fromCamera) {
-        if (!cameraPermission) {
-          const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert("Permission Required", "Please allow camera access to take photos.");
-            return;
-          }
-          setCameraPermission(true);
-        }
-        setShowCamera(true);
-        return;
-      }
-
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert("Permission Required", "Please allow gallery access.");
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-
-      if (!result.canceled) {
-        setImage(result.assets[0].uri);
-        setResult(null);
-        setShowRetakeModal(false);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Could not select image. Please try again.");
-    }
-  };
-
-  const analyzeImage = async () => {
-    if (!image) {
-      Alert.alert("No Image", "Please select or capture a photo first.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      const formData = new FormData();
-      formData.append("file", {
-        uri: image,
-        name: `face_${Date.now()}.jpg`,
-        type: "image/jpeg",
-      });
-
-      const endpoints = [
-        `${API_URL}/api/face/analyze/skin`,
-        `${API_URL}/api/face/analyze/basic`
-      ];
-      
-      let result = null;
-      
-      for (const endpoint of endpoints) {
-        try {
-          const res = await axios.post(endpoint, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-            timeout: 20000,
-          });
-          
-          result = res.data;
-          
-          if (res.data.error === "NO_FACE_DETECTED") {
-            setErrorMessage(res.data.message || "No face detected in the image.");
-            setShowRetakeModal(true);
-            setLoading(false);
-            return;
-          }
-          
-          break;
-          
-        } catch (error) {
-          if (error.response?.data?.error === "NO_FACE_DETECTED") {
-            setErrorMessage(error.response.data.message || "No face detected in the image.");
-            setShowRetakeModal(true);
-            setLoading(false);
-            return;
-          }
-          
-          continue;
-        }
-      }
-      
-      if (result) {
-        if (result.error === "NO_FACE_DETECTED" || !result.face_detected) {
-          setErrorMessage(result.message || "No face detected in the image.");
-          setShowRetakeModal(true);
-        } else {
-          setResult(result);
-          console.log("Analysis complete - Skin Grade:", result.skin_grade);
-        }
-      } else {
-        Alert.alert("Analysis Failed", "Could not analyze the image. Please try again.");
-      }
-      
-    } catch (error) {
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const InfoCard = ({ title, value, icon }) => (
     <View style={styles.infoCard}>
@@ -904,12 +942,6 @@ export default function SkincareScreen({ navigation }) {
     );
   };
 
-  const resetAnalysis = () => {
-    setImage(null);
-    setResult(null);
-    setShowRetakeModal(false);
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
@@ -925,9 +957,9 @@ export default function SkincareScreen({ navigation }) {
               <Icon name="arrow-back" size={24} color={COLORS.primary} />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Face Analysis</Text>
+              <Text style={styles.headerTitle}>Multi-Angle Capture</Text>
               <Text style={styles.headerSubtitle}>
-                {userEmail ? `Welcome, ${userEmail.split('@')[0]}` : 'AI-Powered Skincare Analysis'}
+                {userEmail ? `Welcome, ${userEmail.split('@')[0]}` : '3 Photos for Complete Records'}
               </Text>
             </View>
             {userEmail && (
@@ -943,66 +975,107 @@ export default function SkincareScreen({ navigation }) {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.imageSection}>
-              {image ? (
-                <View style={styles.imageContainer}>
-                  <Image source={{ uri: image }} style={styles.preview} />
-                  <TouchableOpacity style={styles.removeImageButton} onPress={resetAnalysis}>
-                    <Icon name="close" size={20} color={COLORS.surface} />
+              {photos.length > 0 ? (
+                <View style={styles.photosContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
+                    {photos.map((photo, index) => (
+                      <View key={photo.id} style={styles.photoCard}>
+                        <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                        <View style={[styles.photoLabel, photo.position === 'center' && styles.photoLabelActive]}>
+                          <Text style={styles.photoLabelText}>
+                            {photo.positionName}
+                            {photo.position === 'center' && ' ✓'}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity style={styles.removeAllButton} onPress={startNewSession}>
+                    <Icon name="delete" size={20} color={COLORS.error} />
+                    <Text style={styles.removeAllText}>Clear All</Text>
                   </TouchableOpacity>
+                  <Text style={styles.analysisNote}>
+                    * Analysis will be based on the FRONT photo only
+                  </Text>
                 </View>
               ) : (
                 <View style={styles.placeholderContainer}>
-                  <Icon name="add-a-photo" size={48} color={COLORS.secondary} />
-                  <Text style={styles.placeholderText}>No image selected</Text>
+                  <Icon name="camera-alt" size={48} color={COLORS.secondary} />
+                  <Text style={styles.placeholderText}>Capture 3 Photos</Text>
                   <Text style={styles.placeholderSubtext}>
-                    Upload or capture a clear photo for skin analysis{'\n'}
-                    Hold camera {IDEAL_DISTANCE}cm from face for best results
+                    Take photos from 3 different angles for complete records:{'\n'}
+                    Left Side • Front • Right Side{'\n'}
+                    Hold camera {IDEAL_DISTANCE}cm from face{'\n'}
+                    📸 Analysis will be based on FRONT photo only
                   </Text>
                 </View>
               )}
             </View>
 
             <View style={styles.uploadSection}>
-              <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(false)}>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
                 <Icon name="photo-library" size={24} color={COLORS.accent} />
                 <Text style={styles.uploadButtonText}>Gallery</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(true)}>
-                <Icon name="photo-camera" size={24} color={COLORS.accent} />
-                <Text style={styles.uploadButtonText}>Camera</Text>
+              <TouchableOpacity 
+                style={[styles.uploadButton, photos.length > 0 && styles.uploadButtonActive]} 
+                onPress={() => setShowCamera(true)}
+              >
+                <Icon name="photo-camera" size={24} color={photos.length > 0 ? COLORS.success : COLORS.accent} />
+                <Text style={styles.uploadButtonText}>
+                  {photos.length === 0 ? "Start" : photos.length === 3 ? "Retake" : `Take Photo ${photos.length + 1}/3`}
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {image && !result && (
+            {photos.length === 3 && !result && (
               <TouchableOpacity
                 style={[styles.analyzeButton, loading && styles.analyzeButtonDisabled]}
-                onPress={analyzeImage}
+                onPress={() => analyzeFrontPhoto(photos)}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color={COLORS.surface} size="small" />
                 ) : (
                   <>
-                    <Icon name="search" size={20} color={COLORS.surface} />
-                    <Text style={styles.analyzeButtonText}>Analyze Skin</Text>
+                    <Icon name="analytics" size={20} color={COLORS.surface} />
+                    <Text style={styles.analyzeButtonText}>Analyze Front Photo</Text>
                   </>
                 )}
               </TouchableOpacity>
+            )}
+
+            {photos.length > 0 && photos.length < 3 && !result && (
+              <View style={styles.incompleteWarning}>
+                <Icon name="info" size={20} color={COLORS.warning} />
+                <Text style={styles.incompleteWarningText}>
+                  {3 - photos.length} more photo(s) needed
+                </Text>
+              </View>
             )}
 
             {result && (
               <View style={styles.resultsSection}>
                 <View style={styles.resultHeader}>
                   <Text style={styles.resultTitle}>Analysis Results</Text>
-                  {result.api_used && (
+                  {result.multi_angle_info && (
                     <View style={styles.resultBadge}>
                       <Text style={styles.resultBadgeText}>
-                        {result.api_used.includes("Face++") ? "Face++ AI" : result.api_used}
+                        Based on Front Photo
                       </Text>
                     </View>
                   )}
                 </View>
+
+                {result.multi_angle_info && (
+                  <View style={styles.infoNote}>
+                    <Icon name="info" size={16} color={COLORS.accent} />
+                    <Text style={styles.infoNoteText}>
+                      Analysis based on front-facing photo. Side photos saved for reference.
+                    </Text>
+                  </View>
+                )}
 
                 <View style={styles.infoCardsContainer}>
                   <InfoCard title="Age" value={result.age || "Unknown"} icon="person" />
@@ -1010,12 +1083,10 @@ export default function SkincareScreen({ navigation }) {
                   <InfoCard title="Acne Level" value={`${result.acne || 0}/100`} icon="warning" />
                 </View>
 
-                {/* Skin Grade Card */}
                 {result.skin_grade && (
                   <SkinGradeCard grade={result.skin_grade} />
                 )}
 
-                {/* Skin Tone */}
                 {result.skin_attributes?.skin_tone && (
                   <SkinToneCard skinTone={result.skin_attributes.skin_tone} />
                 )}
@@ -1063,7 +1134,7 @@ export default function SkincareScreen({ navigation }) {
                     )}
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.secondaryButton} onPress={resetAnalysis}>
+                  <TouchableOpacity style={styles.secondaryButton} onPress={startNewSession}>
                     <Icon name="refresh" size={18} color={COLORS.accent} />
                     <Text style={styles.secondaryButtonText}>New Analysis</Text>
                   </TouchableOpacity>
@@ -1133,11 +1204,63 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.9,
   },
-  qualityNote: {
+  progressContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 120,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.accent,
+    borderRadius: 2,
+  },
+  progressText: {
+    color: COLORS.surface,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  positionInstructionCard: {
+    position: 'absolute',
+    top: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  positionInstructionText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  positionName: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  positionAngle: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 10,
-    marginTop: 2,
-    marginLeft: 4,
+    fontSize: 12,
+  },
+  positionInstruction: {
+    color: COLORS.accent,
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 8,
   },
   faceGuideContainer: {
     position: 'relative',
@@ -1195,7 +1318,7 @@ const styles = StyleSheet.create({
   },
   distanceGuidanceContainer: {
     position: 'absolute',
-    top: 100,
+    bottom: 120,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -1207,18 +1330,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-  },
-  distancePerfect: {
-    backgroundColor: 'rgba(56, 142, 60, 0.9)',
-  },
-  distanceTooClose: {
-    backgroundColor: 'rgba(211, 47, 47, 0.9)',
-  },
-  distanceTooFar: {
-    backgroundColor: 'rgba(245, 124, 0, 0.9)',
   },
   distanceText: {
     color: COLORS.surface,
@@ -1226,40 +1339,36 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
   },
-  distanceInfoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  distanceInfoText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
-    marginLeft: 6,
-  },
-  alignmentTipsContainer: {
+  thumbnailStrip: {
     position: 'absolute',
-    bottom: 120,
-    left: 0,
-    right: 0,
+    bottom: 20,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: 8,
   },
-  alignmentTip: {
-    flexDirection: 'row',
+  thumbnailContainer: {
+    position: 'relative',
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+  },
+  emptyThumbnail: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
   },
-  alignmentTipText: {
-    color: COLORS.surface,
-    fontSize: 11,
-    marginLeft: 4,
+  thumbnailBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: COLORS.surface,
+    borderRadius: 10,
   },
   cameraControlsOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1281,9 +1390,11 @@ const styles = StyleSheet.create({
   },
   bottomControls: {
     alignItems: 'center',
+    marginBottom: 40,
   },
   captureSection: {
     alignItems: 'center',
+    marginBottom: 12,
   },
   captureButton: {
     width: 80,
@@ -1310,10 +1421,22 @@ const styles = StyleSheet.create({
   captureHint: {
     color: COLORS.surface,
     fontSize: 12,
-    marginTop: 8,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  skipButtonText: {
+    color: COLORS.surface,
+    fontSize: 14,
+    marginRight: 6,
   },
   header: {
     position: 'absolute',
@@ -1330,7 +1453,12 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTextContainer: {
     flex: 1,
@@ -1366,26 +1494,58 @@ const styles = StyleSheet.create({
   imageSection: {
     marginBottom: 24,
   },
-  imageContainer: {
-    position: "relative",
-    alignItems: "center",
+  photosContainer: {
+    alignItems: 'center',
   },
-  preview: {
-    width: "100%",
-    height: 300,
-    borderRadius: 16,
-    backgroundColor: COLORS.background,
+  photosScroll: {
+    flexGrow: 0,
+    marginBottom: 12,
   },
-  removeImageButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(58, 52, 60, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
+  photoCard: {
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  photoPreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+  },
+  photoLabel: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  photoLabelActive: {
+    backgroundColor: COLORS.accent,
+  },
+  photoLabelText: {
+    color: COLORS.surface,
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  removeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+  },
+  removeAllText: {
+    color: COLORS.error,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  analysisNote: {
+    fontSize: 11,
+    color: COLORS.secondary,
+    fontStyle: 'italic',
+    marginTop: 8,
+    textAlign: 'center',
   },
   placeholderContainer: {
     height: 200,
@@ -1425,6 +1585,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(88, 101, 110, 0.2)',
   },
+  uploadButtonActive: {
+    borderColor: COLORS.success,
+    backgroundColor: 'rgba(56, 142, 60, 0.1)',
+  },
   uploadButtonText: {
     fontSize: 14,
     fontWeight: "600",
@@ -1448,6 +1612,21 @@ const styles = StyleSheet.create({
     color: COLORS.surface,
     fontSize: 16,
     fontWeight: "600",
+  },
+  incompleteWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 124, 0, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 8,
+  },
+  incompleteWarningText: {
+    color: COLORS.warning,
+    fontSize: 14,
+    fontWeight: '500',
   },
   resultsSection: {
     marginTop: 8,
@@ -1473,6 +1652,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: COLORS.secondary,
+  },
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(163, 107, 79, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  infoNoteText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    flex: 1,
   },
   infoCardsContainer: {
     flexDirection: "row",

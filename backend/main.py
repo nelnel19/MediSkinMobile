@@ -541,6 +541,145 @@ def preprocess_image(image: Image.Image):
     image = np.expand_dims(image, axis=0)
     return image
 
+def predict_single_image(image: Image.Image):
+    """Make prediction for a single image"""
+    processed_image = preprocess_image(image)
+    predictions = model.predict(processed_image, verbose=0)
+    class_index = int(np.argmax(predictions))
+    confidence = float(predictions[0][class_index])
+    disease_name = CLASS_NAMES[class_index]
+    return disease_name, confidence, predictions[0]
+
+# =========================
+# MULTI-IMAGE ANALYSIS ENDPOINT (NEW)
+# =========================
+@app.post("/predict-skin-multi")
+async def predict_skin_multi(
+    files: list[UploadFile] = File(..., description="Upload up to 3 images of skin condition")
+):
+    """
+    Analyze multiple images (up to 3) and return aggregated results
+    """
+    try:
+        # Validate number of files
+        if not files or len(files) == 0:
+            raise HTTPException(status_code=400, detail="At least one image is required")
+        
+        if len(files) > 3:
+            raise HTTPException(status_code=400, detail="Maximum 3 images allowed")
+        
+        logger.info(f"Received {len(files)} images for analysis")
+        
+        # Store predictions for each image
+        predictions_list = []
+        all_confidences = []
+        all_disease_names = []
+        detailed_results = []
+        
+        for idx, file in enumerate(files):
+            # Read and validate image
+            image_bytes = await file.read()
+            if len(image_bytes) == 0:
+                raise HTTPException(status_code=400, detail=f"Empty image file for image {idx+1}")
+            
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            
+            # Basic image validation
+            if image.size[0] < 50 or image.size[1] < 50:
+                raise HTTPException(status_code=400, detail=f"Image {idx+1} is too small. Please use clearer photos.")
+            
+            # Check if image is mostly a single color
+            img_array = np.array(image)
+            unique_colors = len(np.unique(img_array.reshape(-1, img_array.shape[2]), axis=0))
+            if unique_colors < 10:
+                raise HTTPException(status_code=400, detail=f"Image {idx+1} appears too simple or uniform. Please capture actual skin.")
+            
+            # Make prediction
+            disease_name, confidence, full_predictions = predict_single_image(image)
+            
+            # Get all class probabilities for this image
+            class_probabilities = {
+                CLASS_NAMES[i]: float(full_predictions[i]) 
+                for i in range(len(CLASS_NAMES))
+            }
+            
+            predictions_list.append({
+                "image_index": idx + 1,
+                "disease": disease_name,
+                "confidence": round(confidence * 100, 2),
+                "all_probabilities": class_probabilities
+            })
+            
+            all_confidences.append(confidence)
+            all_disease_names.append(disease_name)
+            detailed_results.append({
+                "image": idx + 1,
+                "disease": disease_name,
+                "confidence": confidence
+            })
+        
+        # Aggregate results
+        from collections import Counter
+        
+        # Find most common disease (mode)
+        disease_counter = Counter(all_disease_names)
+        most_common_disease = disease_counter.most_common(1)[0][0]
+        disease_count = disease_counter[most_common_disease]
+        
+        # Calculate average confidence for the most common disease
+        confidences_for_common = [
+            all_confidences[i] for i, d in enumerate(all_disease_names) 
+            if d == most_common_disease
+        ]
+        avg_confidence = sum(confidences_for_common) / len(confidences_for_common) * 100
+        
+        # Calculate consistency score (percentage of images agreeing on the same disease)
+        consistency_score = (disease_count / len(files)) * 100
+        
+        # Get description and medication info for the aggregated disease
+        description = DISEASE_DESCRIPTIONS.get(most_common_disease, "No description available")
+        medication_info = format_medications_for_response(most_common_disease)
+        
+        # Determine overall confidence level
+        overall_confidence_level = "high" if avg_confidence >= 70 else "medium" if avg_confidence >= 45 else "low"
+        
+        response = {
+            "aggregated_result": {
+                "disease": most_common_disease,
+                "average_confidence": round(avg_confidence, 2),
+                "consistency_score": round(consistency_score, 2),
+                "images_analyzed": len(files),
+                "images_agreeing": disease_count,
+                "confidence_level": overall_confidence_level,
+                "description": description,
+                "medication_info": medication_info
+            },
+            "individual_results": predictions_list,
+            "detailed_analysis": detailed_results
+        }
+        
+        # Add warnings based on consistency
+        if consistency_score < 50:
+            response["warning"] = "Low consistency between images. Results may be less reliable. Consider retaking photos."
+        elif consistency_score < 75:
+            response["warning"] = "Moderate consistency. Results are reasonably reliable but confirm with a doctor."
+        else:
+            response["success"] = "High consistency across all images. Results are reliable."
+        
+        # Check if average confidence is too low
+        if avg_confidence < LOW_CONFIDENCE_THRESHOLD * 100:
+            response["warning"] = f"Average confidence is low ({avg_confidence:.1f}%). Results may not be accurate."
+        
+        logger.info(f"Multi-image analysis complete: {most_common_disease} with {avg_confidence:.1f}% avg confidence, {consistency_score:.1f}% consistent")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Multi-image prediction error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
 # =========================
 # PREDICTION ENDPOINT (Original - kept for backward compatibility)
 # =========================
@@ -804,7 +943,9 @@ async def health_check():
         },
         "classes": CLASS_NAMES,
         "diseases_supported": len(DISEASE_DATABASE),
-        "history_enabled": True
+        "history_enabled": True,
+        "multi_image_support": True,
+        "max_images": 3
     }
 
 # =========================
