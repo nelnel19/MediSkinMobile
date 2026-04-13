@@ -117,7 +117,7 @@ export default function SkincareScreen({ navigation }) {
     return COLORS.error;
   };
 
-  // Save to history with multiple photos
+  // Save to history - ONLY the front photo (center position)
   const saveToHistory = async () => {
     try {
       if (!result || !photos.length || !userEmail) {
@@ -125,55 +125,60 @@ export default function SkincareScreen({ navigation }) {
         return;
       }
 
-      setSaving(true);
-      console.log("========== STARTING SAVE PROCESS ==========");
+      // Find the front/center photo
+      const frontPhoto = photos.find(photo => photo.position === 'center');
       
-      // Upload all photos to Cloudinary
-      const uploadedUrls = [];
-      
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        console.log(`Uploading photo ${i + 1}/${photos.length}...`);
-        
-        const formData = new FormData();
-        formData.append('image', {
-          uri: photo.uri,
-          type: 'image/jpeg',
-          name: `face_${photo.position}_${Date.now()}.jpg`,
-        });
-
-        const uploadResponse = await axios.post(
-          `${API_URL}/api/upload/skin-analysis`,
-          formData,
-          {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 30000
-          }
-        );
-
-        if (!uploadResponse.data.success) {
-          throw new Error(uploadResponse.data.message || `Failed to upload ${photo.position} photo`);
-        }
-
-        uploadedUrls.push({
-          position: photo.position,
-          url: uploadResponse.data.imageUrl,
-          timestamp: Date.now()
-        });
+      if (!frontPhoto) {
+        Alert.alert("Error", "Front-facing photo not found. Please retake the photos.");
+        return;
       }
 
-      console.log('✅ All photos uploaded to Cloudinary successfully!');
+      setSaving(true);
+      console.log("========== STARTING SAVE PROCESS ==========");
+      console.log(`Saving only front photo (center position)...`);
+      
+      // Upload ONLY the front photo to Cloudinary
+      const formData = new FormData();
+      formData.append('image', {
+        uri: frontPhoto.uri,
+        type: 'image/jpeg',
+        name: `face_center_${Date.now()}.jpg`,
+      });
 
-      // Save analysis with multiple photos
+      const uploadResponse = await axios.post(
+        `${API_URL}/api/upload/skin-analysis`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 30000
+        }
+      );
+
+      if (!uploadResponse.data.success) {
+        throw new Error(uploadResponse.data.message || "Failed to upload front photo");
+      }
+
+      const uploadedImageUrl = uploadResponse.data.imageUrl;
+      console.log('✅ Front photo uploaded to Cloudinary successfully!');
+
+      // Prepare analysis result with multi-angle metadata
+      const analysisWithMetadata = {
+        ...result,
+        multi_angle_info: {
+          photos_taken: photos.length,
+          angles_captured: photos.map(p => p.positionName),
+          analysis_based_on: "Front-facing photo",
+          note: "Side photos were captured but not analyzed. Only the front photo was used for analysis."
+        },
+        captured_photos_count: photos.length,
+        captured_positions: photos.map(p => p.position)
+      };
+
+      // Save analysis with single image URL
       const saveData = {
         userEmail,
-        images: uploadedUrls,
-        analysisResult: {
-          ...result,
-          photos_count: photos.length,
-          positions_captured: photos.map(p => p.position),
-          timestamp: Date.now()
-        }
+        imageUrl: uploadedImageUrl,
+        analysisResult: analysisWithMetadata
       };
 
       const saveResponse = await axios.post(
@@ -188,14 +193,18 @@ export default function SkincareScreen({ navigation }) {
       if (saveResponse.data.success) {
         Alert.alert(
           "✅ Saved Successfully",
-          "Your multi-angle analysis has been saved to history!",
+          `Your multi-angle analysis has been saved to history!\n\n` +
+          `📸 Photos captured: ${photos.length} (Left, Front, Right)\n` +
+          `🔍 Analysis based on: Front photo only\n` +
+          `💾 Side photos saved for reference only`,
           [
             { 
               text: "View History", 
               onPress: () => navigation.navigate('History') 
             },
             { 
-              text: "OK" 
+              text: "OK", 
+              style: "cancel"
             }
           ]
         );

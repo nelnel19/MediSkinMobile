@@ -48,6 +48,7 @@ export default function SkinDiseaseScreen({ navigation }) {
   const [errorDetails, setErrorDetails] = useState("");
   const [historySaved, setHistorySaved] = useState(false);
   const [currentStep, setCurrentStep] = useState(0); // 0: capture, 1: review, 2: analyzing
+  const [expandedImage, setExpandedImage] = useState(null); // For fullscreen view
 
   // Get user ID from storage (actual email)
   const getUserId = async () => {
@@ -245,26 +246,63 @@ export default function SkinDiseaseScreen({ navigation }) {
   };
 
   // Individual Image Result Card
-  const IndividualImageResult = ({ result, imageIndex }) => {
+  const IndividualImageResult = ({ result, imageIndex, imageUri, onImagePress }) => {
     let confidenceColor = result.confidence >= 70 ? COLORS.success : 
                          result.confidence >= 45 ? COLORS.info : COLORS.error;
     
     return (
-      <View style={styles.individualResultCard}>
-        <Text style={styles.individualResultTitle}>Image {imageIndex}</Text>
+      <TouchableOpacity 
+        style={styles.individualResultCard}
+        onPress={() => onImagePress(imageUri)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.individualResultHeader}>
+          <Text style={styles.individualResultTitle}>Image {imageIndex}</Text>
+          <TouchableOpacity 
+            style={styles.expandImageIcon}
+            onPress={() => onImagePress(imageUri)}
+          >
+            <Icon name="fullscreen" size={16} color={COLORS.accent} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.individualResultContent}>
-          <Text style={styles.individualResultDisease}>
-            {result.disease.replace(/_/g, ' ')}
-          </Text>
-          <View style={[styles.individualConfidenceBadge, { backgroundColor: `${confidenceColor}20` }]}>
-            <Text style={[styles.individualConfidenceText, { color: confidenceColor }]}>
-              {result.confidence}%
+          <Image source={{ uri: imageUri }} style={styles.individualResultImage} />
+          <View style={styles.individualResultDetails}>
+            <Text style={styles.individualResultDisease}>
+              {result.disease.replace(/_/g, ' ')}
             </Text>
+            <View style={[styles.individualConfidenceBadge, { backgroundColor: `${confidenceColor}20` }]}>
+              <Text style={[styles.individualConfidenceText, { color: confidenceColor }]}>
+                {result.confidence}% confidence
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
+
+  // Fullscreen Image Modal
+  const FullscreenImageModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={expandedImage !== null}
+      onRequestClose={() => setExpandedImage(null)}
+    >
+      <View style={styles.fullscreenOverlay}>
+        <TouchableOpacity 
+          style={styles.fullscreenCloseButton}
+          onPress={() => setExpandedImage(null)}
+        >
+          <Icon name="close" size={28} color={COLORS.surface} />
+        </TouchableOpacity>
+        {expandedImage && (
+          <Image source={{ uri: expandedImage }} style={styles.fullscreenImage} resizeMode="contain" />
+        )}
+      </View>
+    </Modal>
+  );
 
   // Request permissions
   const requestPermissions = async () => {
@@ -704,9 +742,32 @@ export default function SkinDiseaseScreen({ navigation }) {
     </>
   );
 
-  // Render Results Step
+  // Render Results Step with image gallery
   const renderResultsStep = () => (
     <View style={styles.resultsSection}>
+      {/* Reference Images Section */}
+      <View style={styles.referenceImagesSection}>
+        <Text style={styles.referenceImagesTitle}>Reference Images</Text>
+        <View style={styles.referenceImageGrid}>
+          {images.map((image, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.referenceImageSlot}
+              onPress={() => setExpandedImage(image)}
+              activeOpacity={0.7}
+            >
+              <Image source={{ uri: image }} style={styles.referenceImage} />
+              <View style={styles.referenceImageBadge}>
+                <Text style={styles.referenceImageNumber}>{index + 1}</Text>
+              </View>
+              <View style={styles.referenceImageOverlay}>
+                <Icon name="fullscreen" size={20} color={COLORS.surface} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       <View style={styles.resultHeader}>
         <Text style={styles.resultTitle}>Analysis Result</Text>
         <View style={[
@@ -742,12 +803,18 @@ export default function SkinDiseaseScreen({ navigation }) {
         imagesAnalyzed={result?.aggregated_result?.images_analyzed}
       />
 
-      {/* Individual Results */}
+      {/* Individual Results with Images */}
       {result?.individual_results && result.individual_results.length > 0 && (
         <View style={styles.individualResultsSection}>
           <Text style={styles.individualResultsTitle}>Per-Image Analysis</Text>
           {result.individual_results.map((item, index) => (
-            <IndividualImageResult key={index} result={item} imageIndex={item.image_index} />
+            <IndividualImageResult 
+              key={index} 
+              result={item} 
+              imageIndex={item.image_index}
+              imageUri={images[item.image_index - 1]}
+              onImagePress={(uri) => setExpandedImage(uri)}
+            />
           ))}
         </View>
       )}
@@ -810,6 +877,9 @@ export default function SkinDiseaseScreen({ navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
+      {/* Fullscreen Image Modal */}
+      <FullscreenImageModal />
+      
       {/* Retake Photo Modal */}
       <RetakePhotoModal />
       
@@ -828,6 +898,9 @@ export default function SkinDiseaseScreen({ navigation }) {
           )}
           {currentStep === 2 && (
             <Text style={styles.headerSubtitle}>Analyzing...</Text>
+          )}
+          {result && (
+            <Text style={styles.headerSubtitle}>Analysis Complete</Text>
           )}
         </View>
         <TouchableOpacity
@@ -913,7 +986,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  // Image Grid
+  // Reference Images Section (Results)
+  referenceImagesSection: {
+    marginBottom: 24,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(88, 101, 110, 0.1)',
+  },
+  referenceImagesTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: 12,
+  },
+  referenceImageGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  referenceImageSlot: {
+    width: (width - 72) / 3,
+    height: (width - 72) / 3,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  referenceImage: {
+    width: '100%',
+    height: '100%',
+  },
+  referenceImageBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  referenceImageNumber: {
+    color: COLORS.surface,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  referenceImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0,
+  },
+  // Image Grid (Capture)
   imageGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1218,34 +1348,69 @@ const styles = StyleSheet.create({
   },
   individualResultCard: {
     backgroundColor: 'rgba(58, 52, 60, 0.05)',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  individualResultTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.primary,
-    marginBottom: 8,
-  },
-  individualResultContent: {
+  individualResultHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
+  },
+  individualResultTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  expandImageIcon: {
+    padding: 4,
+  },
+  individualResultContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  individualResultImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  individualResultDetails: {
+    flex: 1,
   },
   individualResultDisease: {
     fontSize: 14,
     color: COLORS.secondary,
-    flex: 1,
+    marginBottom: 8,
   },
   individualConfidenceBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   individualConfidenceText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  // Fullscreen Modal
+  fullscreenOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1000,
+    padding: 10,
+  },
+  fullscreenImage: {
+    width: '100%',
+    height: '100%',
   },
   // Medications Section Styles
   medicationsSection: {
