@@ -32,7 +32,7 @@ const COLORS = {
 };
 
 // 🔴 CHANGE THIS TO YOUR PC IP
-const DISEASE_API_URL = "http://192.168.1.114:8000";
+const DISEASE_API_URL = "https://mediskin-backend-python.onrender.com";
 
 const { width } = Dimensions.get('window');
 const IMAGE_SIZE = (width - 60) / 3;
