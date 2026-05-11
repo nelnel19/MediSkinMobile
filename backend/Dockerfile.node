@@ -1,0 +1,21 @@
+FROM node:18-slim
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy all Node.js files
+COPY server.js ./
+COPY routes/ ./routes/
+COPY middleware/ ./middleware/
+COPY config/ ./config/
+COPY models/User.js ./models/User.js
+COPY models/History.js ./models/History.js
+
+# Expose port
+EXPOSE 10000
+
+# Start the server
+CMD ["node", "server.js"]

@@ -1,0 +1,120 @@
+{
+  "expo": {
+    "name": "MediSkin",
+    "slug": "frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo1.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo1.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show nearby dermatology services.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show nearby dermatology services."
+        }
+      ],
+      "expo-font",
+      [
+        "expo-network-security-config",
+        {
+          "domains": [
+            {
+              "domain": "mediskin-node-api.onrender.com",
+              "includeSubdomains": true,
+              "cleartextPermitted": false
+            },
+            {
+              "domain": "mediskin-python-api.onrender.com",
+              "includeSubdomains": true,
+              "cleartextPermitted": false
+            },
+            {
+              "domain": "onrender.com",
+              "includeSubdomains": true,
+              "cleartextPermitted": false
+            },
+            {
+              "domain": "localhost",
+              "includeSubdomains": true,
+              "cleartextPermitted": true
+            },
+            {
+              "domain": "10.0.2.2",
+              "includeSubdomains": true,
+              "cleartextPermitted": true
+            }
+          ]
+        }
+      ],
+      "./withNetworkSecurity.js"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby dermatology services on the map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to show nearby dermatology services on the map.",
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "onrender.com": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": false
+            },
+            "mediskin-node-api.onrender.com": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionAllowsInsecureHTTPLoads": false
+            },
+            "mediskin-python-api.onrender.com": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionAllowsInsecureHTTPLoads": false
+            }
+          }
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo1.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      },
+      "package": "com.mediskin.front",
+      "usesCleartextTraffic": true
+    },
+    "web": {
+      "favicon": "./assets/logo1.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ed40d7b0-bb0b-4bed-806a-c31f3a34cb53"
+      },
+      "nodeApiUrl": "https://mediskin-backend-node.onrender.com",
+      "pythonApiUrl": "https://mediskin-backend-python.onrender.com"
+    }
+  }
+}
