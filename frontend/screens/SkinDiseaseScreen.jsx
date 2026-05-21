@@ -23,7 +23,7 @@ const COLORS = {
   secondary: '#58656E',     // Slate
   tertiary: '#9BAAAE',      // Dusty Blue
   accent: '#A36B4F',        // Terracotta
-  background: '#F5F3F0',    // Light Gray
+  background: '#F5F3F0',    // Light Gray6
   surface: '#FFFFFF',       // White
   error: '#D32F2F',         // Red
   success: '#388E3C',       // Green
@@ -32,7 +32,7 @@ const COLORS = {
 };
 
 // 🔴 CHANGE THIS TO YOUR PC IP
-const DISEASE_API_URL = "http://192.168.1.31:8000";
+const DISEASE_API_URL = "http://192.168.1.136:8000";
 
 const { width } = Dimensions.get('window');
 const IMAGE_SIZE = (width - 60) / 3;

@@ -63,127 +63,114 @@ CLASS_NAMES = [
 ]
 
 # =========================
-# DISEASE INFORMATION DATABASE
+# DISEASE INFORMATION DATABASE (PRESCRIPTION-FREE VERSION)
 # =========================
 DISEASE_DATABASE = {
     "Acne": {
         "description": "Common skin condition when hair follicles become clogged with oil and dead skin cells.",
         "medications": [
             {
-                "category": "Topical Retinoids (Vitamin A Derivatives)",
-                "items": ["Adapalene (Differin)", "Tretinoin (Retin-A)", "Tazarotene"],
-                "description": "Vitamin A derivatives that unclog pores and promote cell turnover. Apply at night."
+                "category": "Gentle Cleansing",
+                "items": ["Use a gentle, non-comedogenic cleanser twice daily", "Avoid harsh soaps that strip natural oils", "Look for cleansers with salicylic acid (over-the-counter)"],
+                "description": "Keep skin clean without over-drying. Wash gently with lukewarm water."
             },
             {
-                "category": "Benzoyl Peroxide",
-                "items": ["2.5% - 10% creams/gels", "Washes", "Leave-on treatments"],
-                "description": "Antiseptic and comedolytic agent that kills bacteria and removes dead skin. Start with lower concentrations."
+                "category": "Over-the-Counter Topical Treatments",
+                "items": ["Benzoyl peroxide (2.5% - 10%)", "Salicylic acid (0.5% - 2%)", "Sulfur-based treatments", "Niacinamide serums"],
+                "description": "Available without prescription. Start with lower concentrations and use as directed."
             },
             {
-                "category": "Topical Antibiotics",
-                "items": ["Clindamycin", "Erythromycin", "Dapsone"],
-                "description": "Reduce bacteria and inflammation. Often combined with benzoyl peroxide to prevent resistance."
+                "category": "Oil Control",
+                "items": ["Use oil-free, non-comedogenic moisturizers", "Blotting papers for excess oil", "Lightweight gel-based products"],
+                "description": "Control excess oil without clogging pores."
             },
             {
-                "category": "Azelaic Acid and Salicylic Acid",
-                "items": ["Azelaic acid (15-20%)", "Salicylic acid", "Niacinamide"],
-                "description": "Exfoliating and anti-inflammatory agents. Good for sensitive skin and dark spots."
+                "category": "Natural Anti-Inflammatories",
+                "items": ["Green tea extract", "Witch hazel (alcohol-free)", "Aloe vera gel", "Tea tree oil (diluted)"],
+                "description": "Gentle natural options to reduce inflammation and redness."
             },
             {
-                "category": "Oral Antibiotics and Systemic Treatment",
-                "items": ["Doxycycline", "Minocycline", "Isotretinoin (severe cases)"],
-                "description": "Prescription-only for moderate to severe acne. Requires medical supervision."
-            },
-            {
-                "category": "Combination Therapy",
-                "items": ["Benzoyl peroxide + clindamycin", "Adapalene + benzoyl peroxide"],
-                "description": "Multiple agents for enhanced effectiveness. Common in fixed-dose combinations."
+                "category": "Lifestyle Modifications",
+                "items": ["Change pillowcases weekly", "Avoid touching face", "Clean phone screens regularly", "Use clean towels daily"],
+                "description": "Simple daily habits to reduce bacterial transfer and irritation."
             }
         ],
         "general_advice": [
             "Wash face twice daily with gentle, non-comedogenic cleanser",
             "Avoid picking or squeezing pimples - can cause scarring",
             "Use oil-free, non-comedogenic skincare and makeup products",
-            "Apply sunscreen daily to prevent post-inflammatory hyperpigmentation",
-            "Be patient - treatments can take 6-8 weeks to show results",
-            "Change pillowcases frequently and avoid touching face"
+            "Apply oil-free sunscreen daily to prevent dark spots",
+            "Be patient - over-the-counter treatments can take 4-8 weeks to show results",
+            "Change pillowcases frequently and avoid touching face",
+            "Consider reducing dairy and high-glycemic foods if breakouts persist"
         ]
     },
     "Actinic_Keratosis": {
-        "description": "Rough, scaly patches on skin from years of sun exposure. Considered precancerous and requires treatment.",
+        "description": "Rough, scaly patches on skin from years of sun exposure. These are precancerous and should be monitored by a dermatologist.",
         "medications": [
             {
-                "category": "Topical Chemotherapeutic Agents",
-                "items": ["5-Fluorouracil (5-FU) cream", "Diclofenac gel"],
-                "description": "Destroys abnormal cells. Causes temporary inflammation and crusting."
+                "category": "Sun Protection (Most Important)",
+                "items": ["Broad-spectrum SPF 50+ sunscreen", "UPF 50+ protective clothing", "Wide-brimmed hats", "UV-blocking sunglasses", "Sun-protective gloves"],
+                "description": "Prevent new lesions and protect existing ones. Reapply sunscreen every 2 hours."
             },
             {
-                "category": "Topical Immune Response Modifiers",
-                "items": ["Imiquimod cream (Aldara)"],
-                "description": "Stimulates immune system to attack abnormal cells. Used for 2-3 times weekly."
+                "category": "Skin Barrier Repair",
+                "items": ["Gentle moisturizers with ceramides", "Niacinamide creams", "Vitamin C serums (antioxidants)", "Hyaluronic acid for hydration"],
+                "description": "Support skin health and repair sun-damaged barrier."
             },
             {
-                "category": "Cryotherapy",
-                "items": ["Liquid nitrogen application"],
-                "description": "Freezing treatment - quick in-office procedure. May cause blistering and hypopigmentation."
+                "category": "Regular Self-Monitoring",
+                "items": ["Monthly skin self-exams", "Take photos to track changes", "Use body map to document spots", "Measure spots with ruler"],
+                "description": "Early detection is key. Monitor for changes in size, color, or texture."
             },
             {
-                "category": "Photodynamic Therapy (PDT)",
-                "items": ["Photosensitizing agent + blue/red light activation"],
-                "description": "Light-based treatment for widespread areas on face and scalp."
+                "category": "Professional Treatment Options",
+                "items": ["Cryotherapy (liquid nitrogen freezing)", "Chemical peels (superficial)", "Photodynamic therapy (light treatment)"],
+                "description": "In-office procedures performed by dermatologist. Covered by most insurance."
             },
             {
-                "category": "Surgical and Destructive Techniques",
-                "items": ["Curettage", "Laser therapy", "Chemical peels", "Dermabrasion"],
-                "description": "Physical removal of lesions. Used for thicker or resistant lesions."
-            },
-            {
-                "category": "Field Treatment vs. Lesion-Directed Therapy",
-                "items": ["Area-wide treatment (field)", "Individual spot treatment"],
-                "description": "Field treatment for sun-damaged areas; lesion-directed for isolated keratoses."
+                "category": "Preventive Lifestyle Changes",
+                "items": ["Seek shade between 10am-4pm", "Avoid tanning beds completely", "Wear sun-protective clothing daily", "Use lip balm with SPF"],
+                "description": "Daily protection prevents progression and new lesions."
             }
         ],
         "general_advice": [
             "Strict sun protection - SPF 50+, protective clothing, wide-brimmed hats",
-            "Regular skin self-exams monthly",
+            "Regular skin self-exams monthly - check all areas including scalp and ears",
             "Professional dermatology follow-ups every 6-12 months",
-            "Avoid tanning beds and excessive sun exposure",
+            "Avoid tanning beds and excessive sun exposure completely",
             "Treatment may require multiple sessions for complete clearance",
-            "Some treatments cause temporary redness and irritation - this indicates they're working"
+            "Some treatments cause temporary redness and irritation - this indicates they're working",
+            "Early treatment prevents progression to skin cancer"
         ]
     },
     "Eczema": {
         "description": "Condition that makes skin red and itchy. Also known as atopic dermatitis. Chronic condition with flares.",
         "medications": [
             {
-                "category": "Moisturizers and Emollients",
-                "items": ["Ceramide creams (CeraVe, Cetaphil Restoraderm)", "Petroleum jelly (Vaseline)", "Urea-based creams", "Aquaphor"],
-                "description": "Restore skin barrier - apply liberally and frequently, even when skin is clear"
+                "category": "Intensive Moisturizing",
+                "items": ["Thick cream moisturizers (ceramide-rich)", "Petroleum jelly (Vaseline)", "Shea butter based creams", "Oatmeal-based lotions", "Urea creams (10% or less)"],
+                "description": "Apply liberally and frequently - at least 2-3 times daily, especially after bathing"
             },
             {
-                "category": "Topical Corticosteroids",
-                "items": ["Hydrocortisone 1% (mild)", "Triamcinolone 0.1% (moderate)", "Clobetasol 0.05% (potent)", "Mometasone"],
-                "description": "Reduce inflammation and itching. Use as prescribed - avoid long-term use on face/creases."
+                "category": "Over-the-Counter Anti-Itch Relief",
+                "items": ["Hydrocortisone cream 1% (for short-term use)", "Pramoxine lotions", "Calamine lotion", "Colloidal oatmeal baths"],
+                "description": "Temporary relief for mild itching. Use as directed and not for extended periods."
             },
             {
-                "category": "Topical Calcineurin Inhibitors",
-                "items": ["Tacrolimus (Protopic)", "Pimecrolimus (Elidel)"],
-                "description": "Non-steroidal anti-inflammatory for sensitive areas like face, eyelids, and skin folds."
+                "category": "Natural Soothing Agents",
+                "items": ["Cold compresses", "Aloe vera gel", "Coconut oil (virgin/unrefined)", "Sunflower seed oil", "Jojoba oil"],
+                "description": "Cool and soothe inflamed skin naturally."
             },
             {
-                "category": "Antihistamines",
-                "items": ["Cetirizine (Zyrtec)", "Loratadine (Claritin)", "Fexofenadine (Allegra)", "Diphenhydramine (Benadryl - for sleep)"],
-                "description": "Systemic relief for itching, especially at night. Non-sedating for daytime use."
+                "category": "Gentle Skin Care Routine",
+                "items": ["Fragrance-free cleansers", "Non-soap cleansers", "Avoid hot water (use lukewarm)", "Pat dry - don't rub", "Apply moisturizer within 3 minutes of bathing"],
+                "description": "Proper bathing and moisturizing routine prevents flares."
             },
             {
-                "category": "Wet Wrap Therapy",
-                "items": ["Damp bandages/garments over moisturized skin"],
-                "description": "Intensive treatment for severe flares. Apply moisturizer, wet wraps, then dry layer."
-            },
-            {
-                "category": "Trigger Avoidance",
-                "items": ["Identify and avoid personal triggers"],
-                "description": "Common triggers: harsh soaps, allergens, stress, weather changes, wool fabrics"
+                "category": "Trigger Management",
+                "items": ["Identify and avoid personal triggers", "Use humidifier in dry weather", "Wear soft cotton clothing", "Avoid wool and synthetic fabrics", "Use fragrance-free laundry detergent"],
+                "description": "Environmental triggers are common - track what causes flares."
             }
         ],
         "general_advice": [
@@ -192,75 +179,77 @@ DISEASE_DATABASE = {
             "Wear soft, breathable fabrics like cotton; avoid wool and synthetics",
             "Keep nails short and smooth to minimize damage from scratching",
             "Use fragrance-free, hypoallergenic laundry detergents",
-            "Maintain comfortable room temperature and humidity"
+            "Maintain comfortable room temperature and humidity (40-60%)",
+            "Avoid known triggers like stress, harsh soaps, and extreme temperatures"
         ]
     },
     "Infestations_Bites": {
         "description": "Skin reactions from insect bites or parasitic infestations like scabies, lice, or bed bugs.",
         "medications": [
             {
-                "category": "Topical Skin Soothers",
-                "items": ["Calamine lotion", "Colloidal oatmeal baths", "Hydrocortisone cream 1%", "Pramoxine", "Aloe vera"],
+                "category": "Topical Itch Relief",
+                "items": ["Calamine lotion", "Colloidal oatmeal baths", "Baking soda paste", "Aloe vera gel", "Cool compresses"],
                 "description": "Relieve itching and inflammation from bites. Apply as needed for symptom relief."
             },
             {
-                "category": "Antihistamines",
-                "items": ["Diphenhydramine (Benadryl)", "Loratadine (Claritin)", "Cetirizine (Zyrtec)"],
-                "description": "Systemic relief for itching and allergic reactions. Sedating options help with sleep."
+                "category": "Oral Anti-Itch Options",
+                "items": ["Oral antihistamines (cetirizine, loratadine, fexofenadine)", "Diphenhydramine (for nighttime itching)"],
+                "description": "Over-the-counter antihistamines help reduce itching and allergic reactions."
             },
             {
-                "category": "Antiparasitic Agents",
-                "items": ["Permethrin 5% cream (scabies)", "Benzyl benzoate", "Ivermectin (oral)", "Lindane (second-line)"],
-                "description": "Kill parasitic organisms causing infestations. Requires prescription and specific application instructions."
+                "category": "Over-the-Counter Treatments",
+                "items": ["Permethrin cream (for scabies - available OTC in many countries)", "Pyrethrin-based sprays (for lice)", "Lice combs and kits"],
+                "description": "Many treatments are available without prescription. Follow package instructions carefully."
             },
             {
-                "category": "Secondary Infection Prevention",
-                "items": ["Mupirocin (Bactroban)", "Bacitracin", "Neosporin", "Oral antibiotics if infected"],
-                "description": "Prevent or treat bacterial infection from scratching. Apply to broken skin."
+                "category": "Environmental Control",
+                "items": ["Wash all bedding in hot water (130°F/54°C)", "Dry on high heat for at least 30 minutes", "Vacuum carpets and furniture thoroughly", "Seal non-washable items in plastic bags for 2 weeks", "Use mattress and pillow encasements"],
+                "description": "Remove pests from environment and prevent reinfestation."
             },
             {
-                "category": "Elimination of Causative Organisms",
-                "items": ["Lice combs", "Environmental sprays", "Washing bedding in hot water", "Vacuuming", "Freezing items"],
-                "description": "Remove pests from environment and prevent reinfestation. Treat household contacts simultaneously."
+                "category": "Prevention",
+                "items": ["Insect repellent with DEET or picaridin", "Permethrin-treated clothing", "Mosquito nets", "Avoid standing water", "Cover skin when outdoors at dawn/dusk"],
+                "description": "Prevent future bites and infestations."
             }
         ],
         "general_advice": [
             "Avoid scratching - can lead to secondary bacterial infection",
             "Apply cold compresses to reduce itching and swelling",
             "For scabies/lice, treat all household members and close contacts simultaneously",
-            "Wash all bedding, clothing, and towels in hot water (130°F/54°C) and dry on high heat",
+            "Wash all bedding, clothing, and towels in hot water and dry on high heat",
             "Vacuum carpets, furniture, and mattresses thoroughly",
             "Items that can't be washed can be sealed in plastic bags for 2 weeks",
-            "Use insect repellent with DEET or picaridin when outdoors"
+            "Use insect repellent with DEET or picaridin when outdoors",
+            "Consult pharmacist for over-the-counter treatment options"
         ]
     },
     "Moles": {
         "description": "Growths on the skin, usually brown or black. Most are benign but should be monitored for changes.",
         "medications": [
             {
-                "category": "Observation and Monitoring",
-                "items": ["Regular self-exams", "ABCDE criteria tracking", "Monthly checks", "Baseline photography"],
-                "description": "Monitor for changes in size, shape, color, or symptoms. Document with photos."
+                "category": "Sun Protection",
+                "items": ["Broad-spectrum SPF 50+ sunscreen", "UPF clothing", "Hats with brim", "Seek shade during peak hours"],
+                "description": "Protect moles from UV damage. Apply sunscreen generously over all moles."
             },
             {
-                "category": "Medical Evaluation",
-                "items": ["Dermatoscopy (dermoscopy)", "Total body skin examination", "Sequential digital dermoscopy"],
-                "description": "Professional assessment of suspicious moles using specialized magnification."
+                "category": "Self-Monitoring Tools",
+                "items": ["Handheld mirror", "Body mole map template", "Smartphone photography with date stamp", "Ruler for measuring", "Good lighting"],
+                "description": "Track changes monthly using the ABCDE method."
             },
             {
-                "category": "Surgical Removal",
-                "items": ["Excision with stitches", "Shave removal", "Punch excision"],
-                "description": "For suspicious moles, irritated moles, or cosmetic concerns. Usually outpatient procedure."
+                "category": "Daily Skin Protection",
+                "items": ["Moisturizer with SPF", "Lip balm with SPF", "Sunscreen sticks for easy reapplication", "Sunscreen spray for hard-to-reach areas"],
+                "description": "Make sun protection a daily habit, not just for beach days."
             },
             {
-                "category": "Biopsy and Histologic Examination",
-                "items": ["Punch biopsy", "Excisional biopsy", "Shave biopsy", "Incisional biopsy"],
-                "description": "Tissue sampling for microscopic examination to rule out malignancy."
+                "category": "Professional Monitoring",
+                "items": ["Annual full-body skin exam by dermatologist", "Baseline photography", "Dermoscopy (specialized magnification)"],
+                "description": "Regular professional checks are essential, especially if you have many moles."
             },
             {
-                "category": "Least Invasive Management",
-                "items": ["Leave in place", "Monitor with photography", "Regular surveillance"],
-                "description": "Appropriate for benign-appearing, stable, symmetrical moles with no concerning features."
+                "category": "When to Seek Care",
+                "items": ["ABCDE criteria check", "New mole after age 30", "Mole that itches or bleeds", "Mole that looks different from others", "Family history of skin cancer"],
+                "description": "Know the warning signs and when to consult a dermatologist."
             }
         ],
         "general_advice": [
@@ -270,130 +259,118 @@ DISEASE_DATABASE = {
             "Use a mirror or ask someone to help examine hard-to-see areas",
             "See dermatologist for any new, changing, or symptomatic moles",
             "Not all moles need removal - only suspicious, symptomatic, or cosmetically concerning ones",
-            "Take baseline photos and date them for future comparison"
+            "Take baseline photos and date them for future comparison",
+            "Limit sun exposure, especially between 10am-4pm"
         ]
     },
     "Psoriasis": {
         "description": "Skin disease that causes red, itchy scaly patches, commonly on knees, elbows, and scalp. Autoimmune condition.",
         "medications": [
             {
-                "category": "Topical Corticosteroids",
-                "items": ["Betamethasone", "Clobetasol", "Triamcinolone", "Fluocinonide", "Hydrocortisone (mild cases)"],
-                "description": "Reduce inflammation and slow skin cell turnover. Different potencies for different body areas."
+                "category": "Intensive Moisturizing",
+                "items": ["Thick emollient creams", "Petroleum jelly", "Shea butter", "Coconut oil", "Urea-based creams (10-20%)", "Salicylic acid creams (OTC 2-3%) for scales"],
+                "description": "Keep skin well-hydrated to reduce scaling and itching. Apply multiple times daily."
             },
             {
-                "category": "Vitamin D Analogues",
-                "items": ["Calcipotriene (Dovonex)", "Calcitriol", "Tacalcitol"],
-                "description": "Slow skin cell growth and normalize skin development. Often combined with steroids."
+                "category": "Over-the-Counter Scale Reducers",
+                "items": ["Coal tar preparations (shampoos, creams, ointments)", "Salicylic acid (2-3%)", "Sulfur preparations", "Baking soda baths"],
+                "description": "Help remove scales and reduce itching. Available without prescription."
             },
             {
-                "category": "Phototherapy (Ultraviolet Light Therapy)",
-                "items": ["UVB narrowband", "PUVA (psoralen + UVA)", "Excimer laser", "Home UVB units"],
-                "description": "Light therapy for widespread or resistant psoriasis. 2-3 times weekly treatments."
+                "category": "Natural Anti-Inflammatories",
+                "items": ["Aloe vera gel", "Capsaicin cream (from chili peppers)", "Oatmeal baths", "Dead Sea salt baths", "Apple cider vinegar (diluted for scalp)"],
+                "description": "Natural options to reduce inflammation and itching."
             },
             {
-                "category": "Systemic Anti-Inflammatory and Immune Modulators",
-                "items": ["Methotrexate", "Cyclosporine", "Apremilast (Otezla)", "Acitretin"],
-                "description": "Oral medications for moderate to severe cases. Requires regular blood test monitoring."
+                "category": "Lifestyle Management",
+                "items": ["Stress reduction techniques (meditation, yoga)", "Regular exercise", "Healthy anti-inflammatory diet", "Avoid alcohol", "Maintain healthy weight"],
+                "description": "Stress and lifestyle factors significantly affect psoriasis flares."
             },
             {
-                "category": "Biologics",
-                "items": ["Adalimumab (Humira)", "Etanercept (Enbrel)", "Ustekinumab (Stelara)", "Secukinumab (Cosentyx)", "Ixekizumab (Taltz)"],
-                "description": "Targeted immune modulators for severe disease. Self-injected or IV infusions."
-            },
-            {
-                "category": "Combination Therapy",
-                "items": ["Topical + phototherapy", "Topical + systemic", "Systemic + biologic"],
-                "description": "Multiple approaches for better control with lower doses of individual medications."
+                "category": "Light Therapy (Home Options)",
+                "items": ["Limited sun exposure (10-15 minutes daily)", "Use caution to avoid sunburn", "Cover unaffected areas", "Best in morning or late afternoon"],
+                "description": "Controlled sun exposure can help. Always protect face and unaffected areas."
             }
         ],
         "general_advice": [
             "Keep skin well-moisturized with thick creams and ointments",
-            "Identify and avoid triggers (stress, infection, certain medications, skin injuries)",
+            "Identify and avoid triggers (stress, infection, skin injuries, alcohol)",
             "Take lukewarm baths with Epsom salts, Dead Sea salts, or colloidal oatmeal",
             "Limited sun exposure can help (5-10 minutes) but avoid sunburn",
             "Manage stress through relaxation techniques, exercise, or counseling",
-            "Avoid alcohol which can worsen psoriasis and interfere with treatments",
-            "Don't pick at scales - this can cause new lesions (Koebner phenomenon)"
+            "Avoid alcohol which can worsen psoriasis",
+            "Don't pick at scales - this can cause new lesions",
+            "Consider anti-inflammatory diet rich in fish, vegetables, and fruits"
         ]
     },
     "Rosacea": {
         "description": "Chronic skin condition that causes redness and visible blood vessels on the face. Often includes papules and pustules.",
         "medications": [
             {
-                "category": "Topical Anti-Inflammatory Agents",
-                "items": ["Metronidazole cream/gel (0.75-1%)", "Azelaic acid (15-20%)", "Ivermectin cream (1%)"],
-                "description": "Reduce redness and inflammatory lesions. Apply once or twice daily."
+                "category": "Gentle Skin Care",
+                "items": ["Fragrance-free, non-comedogenic cleansers", "Alcohol-free products", "Lukewarm water only (never hot)", "Soft cotton pads (no scrubbing)", "Pat dry gently"],
+                "description": "Gentle cleansing is essential. Avoid anything that irritates skin."
             },
             {
-                "category": "Oral Antibiotics (Anti-Inflammatory Doses)",
-                "items": ["Doxycycline (40mg modified-release)", "Minocycline", "Tetracycline"],
-                "description": "Anti-inflammatory doses (not antibacterial) for moderate rosacea."
-            },
-            {
-                "category": "Vascular Modulators and Redness-Reducing Agents",
-                "items": ["Brimonidine gel (Mirvaso)", "Oxymetazoline cream (Rhofade)"],
-                "description": "Temporarily reduce facial redness by constricting blood vessels. Effects last 8-12 hours."
-            },
-            {
-                "category": "Avoidance of Triggers and Gentle Skin Care",
-                "items": ["Identify personal triggers", "Fragrance-free products", "Non-irritating cleansers"],
-                "description": "Common triggers: sun, stress, spicy foods, alcohol, hot beverages, extreme temperatures"
+                "category": "Over-the-Counter Topical Options",
+                "items": ["Azelaic acid (10% OTC)", "Niacinamide serums", "Sulfur-based creams", "Green-tinted color correctors", "Mineral makeup (non-irritating)"],
+                "description": "Help reduce redness and bumps. Available without prescription."
             },
             {
                 "category": "Sun Protection",
-                "items": ["Broad-spectrum SPF 30+", "Mineral sunscreens (zinc oxide, titanium dioxide)"],
-                "description": "Essential for preventing flares and reducing redness. Apply daily regardless of weather."
+                "items": ["Mineral sunscreens (zinc oxide, titanium dioxide only)", "SPF 30-50+ broad spectrum", "Physical blockers (no chemical sunscreens)", "Wide-brimmed hat", "Seek shade"],
+                "description": "Sun is a major trigger. Physical sunscreens are less irritating than chemical ones."
             },
             {
-                "category": "Adjunctive Supportive Care",
-                "items": ["Intense Pulsed Light (IPL)", "Laser therapy", "Electrocautery"],
-                "description": "Reduce visible blood vessels and persistent redness. Multiple sessions needed."
+                "category": "Trigger Management",
+                "items": ["Keep a trigger diary", "Avoid spicy foods", "Limit alcohol (especially red wine)", "Avoid hot beverages", "Stay cool (avoid overheating)", "Manage stress"],
+                "description": "Identifying and avoiding personal triggers is the most effective management strategy."
+            },
+            {
+                "category": "Redness Reduction Techniques",
+                "items": ["Cool compresses", "Green tea compresses (cooled)", "Aloe vera gel", "Avoid extreme temperatures", "Sleep with head slightly elevated", "Use humidifier"],
+                "description": "Cooling and calming techniques help reduce acute redness."
             }
         ],
         "general_advice": [
             "Use gentle, fragrance-free, non-comedogenic skincare products",
-            "Apply sunscreen every day, even indoors and during winter",
+            "Apply mineral sunscreen every day (zinc oxide or titanium dioxide)",
             "Avoid hot showers, saunas, steam rooms, and overheating",
             "Keep a trigger diary to identify and avoid personal triggers",
             "Be gentle with your skin - no harsh scrubbing or exfoliating",
             "Use lukewarm water for washing face",
-            "Protect face from cold wind with scarf",
-            "Choose cosmetics labeled 'non-comedogenic' and 'hypoallergenic'"
+            "Protect face from cold wind with soft scarf",
+            "Choose cosmetics labeled 'non-comedogenic' and 'hypoallergenic'",
+            "Avoid spicy foods, alcohol, and hot beverages if they trigger flares"
         ]
     },
     "Sun_Sunlight_Damage": {
         "description": "Skin damage caused by prolonged sun exposure including sunburn, photoaging, and actinic damage.",
         "medications": [
             {
-                "category": "Skin Soothing and Hydration After UV Exposure",
-                "items": ["Aloe vera gel", "Cool compresses", "Fragrance-free moisturizers", "After-sun products"],
-                "description": "Immediate relief for acute sunburn. Apply liberally and reapply frequently."
+                "category": "Immediate Sunburn Relief",
+                "items": ["Cool compresses", "Aloe vera gel (pure, no alcohol)", "Cool colloidal oatmeal baths", "Fragrance-free moisturizers", "Cool water soaks"],
+                "description": "Apply immediately after sun exposure. Keep skin cool and hydrated."
             },
             {
-                "category": "Anti-Inflammatory Medications",
-                "items": ["Hydrocortisone cream 1%", "Over-the-counter hydrocortisone"],
-                "description": "Reduce inflammation and redness from sunburn. Use for 2-3 days only."
+                "category": "Hydration and Skin Repair",
+                "items": ["Drink plenty of water", "Petroleum jelly on blisters (don't pop)", "Gentle fragrance-free moisturizers", "Hyaluronic acid serums", "Niacinamide creams"],
+                "description": "Rehydrate skin from inside and out. Support natural healing."
             },
             {
-                "category": "Systemic Anti-Inflammatory Support",
-                "items": ["Ibuprofen (Advil)", "Naproxen (Aleve)", "Aspirin"],
-                "description": "Reduce pain and inflammation from severe sunburn. Start as soon as possible after burn."
+                "category": "Over-the-Counter Relief",
+                "items": ["Hydrocortisone cream 1% (for severe redness, short-term)", "Ibuprofen or naproxen (for pain and inflammation)", "Cooling gels with menthol", "Calamine lotion"],
+                "description": "For symptom management. Use as directed on package."
             },
             {
-                "category": "Barrier Repair and Skin Protection",
-                "items": ["Ceramide creams", "Petroleum jelly", "Aquaphor", "Cicaplast"],
-                "description": "Restore damaged skin barrier during healing phase."
+                "category": "Long-term Skin Health",
+                "items": ["Vitamin C serums (antioxidants)", "Vitamin E creams", "Green tea extract products", "Retinol creams (start with low concentration OTC)", "Niacinamide (helps repair UV damage)"],
+                "description": "Support skin repair and prevent further damage."
             },
             {
-                "category": "Sun Protection to Prevent Further Damage",
-                "items": ["SPF 30-50+ broad spectrum", "UPF clothing", "Wide-brimmed hats", "Sunglasses", "Sun-protective swimwear"],
-                "description": "Prevent further damage. Reapply every 2 hours and after swimming/sweating."
-            },
-            {
-                "category": "Monitoring and Medical Evaluation",
-                "items": ["Regular skin checks", "Dermatology referral for persistent changes"],
-                "description": "Evaluate persistent redness, texture changes, or concerning lesions."
+                "category": "Prevention (Most Important)",
+                "items": ["SPF 30-50+ broad spectrum sunscreen (apply 15 min before sun)", "Reapply every 2 hours", "UPF 50+ protective clothing", "Wide-brimmed hats", "Seek shade 10am-4pm"],
+                "description": "Prevention is the only cure. Make sun protection a daily habit."
             }
         ],
         "general_advice": [
@@ -405,41 +382,37 @@ DISEASE_DATABASE = {
             "Take cool baths or use cool compresses for sunburn relief",
             "Use moisturizer with aloe vera or soy to soothe sunburned skin",
             "Stay out of the sun while sunburn is healing",
-            "Regular self-exams for any new or changing spots from cumulative sun damage"
+            "Regular self-exams for any new or changing spots from cumulative sun damage",
+            "Wear UPF clothing, wide-brimmed hats, and UV-blocking sunglasses"
         ]
     },
     "Vitiligo": {
         "description": "Condition where skin loses its pigment cells (melanocytes), resulting in white patches on the skin.",
         "medications": [
             {
-                "category": "Topical Corticosteroids",
-                "items": ["Potent corticosteroids (clobetasol, betamethasone)", "Mometasone"],
-                "description": "First-line treatment for localized vitiligo. Use intermittently to prevent side effects."
+                "category": "Sun Protection (Essential)",
+                "items": ["Broad-spectrum SPF 50+ sunscreen (apply to all depigmented areas)", "Zinc oxide or titanium dioxide sunscreens", "UPF 50+ protective clothing", "Wide-brimmed hats", "Sun-protective sleeves/gloves"],
+                "description": "Depigmented skin has NO natural sun protection. Sun protection is absolutely essential."
             },
             {
-                "category": "Topical Calcineurin Inhibitors",
-                "items": ["Tacrolimus (Protopic)", "Pimecrolimus (Elidel)"],
-                "description": "Especially for face and sensitive areas. Fewer side effects than steroids."
+                "category": "Camouflage Options",
+                "items": ["Self-tanners (DHA-based) to blend white patches", "Camouflage makeup (waterproof, transfer-resistant)", "Body stains and dyes", "Color correctors", "Setting powders"],
+                "description": "Cosmetic options to even skin tone appearance. Test on small area first."
             },
             {
-                "category": "Phototherapy (Ultraviolet B Light)",
-                "items": ["Narrowband UVB", "Excimer laser (308nm)", "PUVA"],
-                "description": "Most effective for widespread vitiligo. Requires 2-3 treatments weekly for months."
+                "category": "Natural Supportive Therapies",
+                "items": ["Ginkgo biloba extract (may help repigmentation)", "Vitamin D supplements (due to sun avoidance)", "Vitamin B12 and folic acid", "Alpha-lipoic acid (antioxidant)", "Polypodium leucotomos (fern extract)"],
+                "description": "Some natural supplements may support repigmentation. Discuss with healthcare provider."
             },
             {
-                "category": "Systemic Therapies",
-                "items": ["Oral corticosteroids (short-term)", "JAK inhibitors (ruxolitinib cream)", "Minocycline"],
-                "description": "For rapidly progressive or extensive disease. Newer treatments show promise."
+                "category": "Topical Options (Over-the-Counter)",
+                "items": ["Hydrocortisone cream 1% (for short-term use on small areas)", "Avoid harsh chemicals and irritants", "Gentle moisturizers to maintain skin health"],
+                "description": "OTC options are limited. Most treatments require prescription or medical supervision."
             },
             {
-                "category": "Depigmentation",
-                "items": ["Monobenzone cream", "Hydroquinone"],
-                "description": "Option for extensive vitiligo (>50% body surface) to achieve uniform skin tone. Permanent."
-            },
-            {
-                "category": "Sun Protection and Cosmetic Support",
-                "items": ["Broad-spectrum SPF 50+", "Camouflage makeup", "Self-tanners", "Dyes"],
-                "description": "Protect depigmented skin from sunburn. Cosmetic options for appearance."
+                "category": "Lifestyle Management",
+                "items": ["Stress reduction techniques", "Join vitiligo support groups", "Counseling for body image", "Protective clothing year-round", "Avoid skin trauma (cuts, scrapes, friction)"],
+                "description": "Emotional support and stress management are important for quality of life."
             }
         ],
         "general_advice": [
@@ -450,36 +423,37 @@ DISEASE_DATABASE = {
             "Join support groups for emotional support and coping strategies",
             "Protect patches from sunburn with high SPF sunscreen, clothing, and seeking shade",
             "Stress management may help prevent progression",
-            "Consider vitamin D supplementation as sun avoidance limits natural vitamin D production"
+            "Consider vitamin D supplementation as sun avoidance limits natural vitamin D production",
+            "Consult dermatologist for prescription treatments if desired"
         ]
     },
     "Warts": {
         "description": "Small, rough growths on the skin caused by human papillomavirus (HPV). Common on hands, feet, and face.",
         "medications": [
             {
-                "category": "Keratolytic Agents",
-                "items": ["Salicylic acid (liquid, gel, pads - 17-40%)", "Lactic acid", "Urea"],
+                "category": "Over-the-Counter Keratolytic Agents",
+                "items": ["Salicylic acid (17-40% liquid, gel, or pads)", "Lactic acid preparations", "Urea creams (20-40%)", "Silver nitrate sticks (available at pharmacies)"],
                 "description": "Peel away layers of the wart gradually. Apply daily, file dead skin between treatments."
             },
             {
-                "category": "Immune Response Modulators",
-                "items": ["Imiquimod cream (Aldara 5%)"],
-                "description": "Stimulate body's immune system to fight the virus. Prescription only."
+                "category": "Home Physical Treatments",
+                "items": ["Duct tape occlusion (cover wart with duct tape for 6 days, remove, file, repeat)", "Pumice stone or emery board (file between treatments)", "Warm water soaks (soften before treatment)"],
+                "description": "Simple home methods that can be very effective. Patience is key."
             },
             {
-                "category": "Physical/Destructive Techniques",
-                "items": ["Cryotherapy (liquid nitrogen)", "Cantharidin", "Electrosurgery", "Laser therapy", "Curettage"],
-                "description": "In-office procedures to destroy wart tissue. Multiple sessions often needed."
+                "category": "Natural Remedies",
+                "items": ["Apple cider vinegar (diluted, apply with cotton ball)", "Tea tree oil (diluted)", "Garlic extract", "Thuja oil", "Vitamin E oil"],
+                "description": "Natural options some people find helpful. Test on small area first."
             },
             {
-                "category": "Duct Tape and Occlusion Strategies",
-                "items": ["Duct tape", "Medical tape", "Apple cider vinegar (home remedy)"],
-                "description": "Adjunctive therapy - may stimulate immune response. Change every few days."
+                "category": "Prevention and Hygiene",
+                "items": ["Keep feet dry (wear breathable shoes/socks)", "Don't share towels, shoes, socks, or razors", "Cover warts when swimming", "Wear flip-flops in locker rooms and public showers", "Dispose of emery boards after use"],
+                "description": "Prevent spread to other body parts and to other people."
             },
             {
-                "category": "Secondary Infection Prevention",
-                "items": ["Keep clean and dry", "Avoid picking", "Cover with waterproof bandage"],
-                "description": "Prevent spread to other areas of body or to other people."
+                "category": "Immune Support",
+                "items": ["Zinc supplements (oral)", "Multivitamins (ensure adequate nutrition)", "Healthy diet (fruits, vegetables)", "Adequate sleep", "Stress reduction"],
+                "description": "Strong immune system helps body fight HPV virus."
             }
         ],
         "general_advice": [
@@ -490,7 +464,8 @@ DISEASE_DATABASE = {
             "Cover warts with waterproof bandage when swimming",
             "Wear flip-flops in communal showers and locker rooms",
             "File warts with disposable emery board between treatments",
-            "Be patient - many warts eventually resolve on their own but treatment speeds resolution"
+            "Be patient - many warts eventually resolve on their own but treatment speeds resolution",
+            "If OTC treatments fail after 3 months, consult healthcare provider"
         ]
     }
 }
@@ -518,7 +493,7 @@ def format_medications_for_response(disease_name):
     return {
         "has_medications": False,
         "medications": [],
-        "general_advice": ["Please consult a dermatologist for specific treatment recommendations."]
+        "general_advice": ["Please consult a healthcare provider for specific treatment recommendations."]
     }
 
 # Disease descriptions for basic response
@@ -551,7 +526,7 @@ def predict_single_image(image: Image.Image):
     return disease_name, confidence, predictions[0]
 
 # =========================
-# MULTI-IMAGE ANALYSIS ENDPOINT (NEW)
+# MULTI-IMAGE ANALYSIS ENDPOINT
 # =========================
 @app.post("/predict-skin-multi")
 async def predict_skin_multi(
@@ -746,7 +721,7 @@ async def predict_skin(file: UploadFile = File(...)):
                 "confidence": round(confidence * 100, 2),
                 "description": description,
                 "medication_info": medication_info,
-                "warning": "Medium confidence - please consult a doctor for confirmation",
+                "warning": "Medium confidence - please consult a healthcare provider for confirmation",
                 "is_confident": True
             }
         else:
@@ -836,7 +811,7 @@ async def predict_skin_only(file: UploadFile = File(...)):
                 "confidence": round(confidence * 100, 2),
                 "description": description,
                 "medication_info": medication_info,
-                "warning": "Medium confidence - please consult a doctor for confirmation",
+                "warning": "Medium confidence - please consult a healthcare provider for confirmation",
                 "is_confident": True
             }
         else:
@@ -857,7 +832,7 @@ async def predict_skin_only(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 # =========================
-# NEW: SAVE ANALYSIS TO HISTORY ENDPOINT
+# SAVE ANALYSIS TO HISTORY ENDPOINT
 # =========================
 @app.post("/save-analysis-to-history")
 async def save_analysis_to_history(
@@ -945,7 +920,8 @@ async def health_check():
         "diseases_supported": len(DISEASE_DATABASE),
         "history_enabled": True,
         "multi_image_support": True,
-        "max_images": 3
+        "max_images": 3,
+        "disclaimer": "These recommendations are for informational purposes only. Always consult a healthcare provider for medical advice."
     }
 
 # =========================

@@ -1,7 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import History from "../models/History.js"; // Import the actual model
+import History from "../models/History.js";
 
 const router = express.Router();
 
@@ -33,29 +33,48 @@ router.post("/save-analysis", async (req, res) => {
       .update(imageUrl + Date.now())
       .digest('hex');
 
-    // Extract skinGrade from analysisResult
-    let skinGrade = 'Unknown';
+    // Extract skinGrade string from analysisResult
+    let skinGradeString = 'Unknown';
     let overallCondition = 'Unknown';
     
+    // Handle skin_grade object
     if (analysisResult.skin_grade) {
-      skinGrade = analysisResult.skin_grade;
+      if (typeof analysisResult.skin_grade === 'object' && analysisResult.skin_grade.grade) {
+        // It's an object with a grade property
+        skinGradeString = analysisResult.skin_grade.grade;
+        // Also extract overall condition from description
+        overallCondition = analysisResult.skin_grade.description || 'Unknown';
+      } else if (typeof analysisResult.skin_grade === 'string') {
+        // It's already a string
+        skinGradeString = analysisResult.skin_grade;
+      }
     } else if (analysisResult.skinGrade) {
-      skinGrade = analysisResult.skinGrade;
+      // Alternative field name
+      if (typeof analysisResult.skinGrade === 'object' && analysisResult.skinGrade.grade) {
+        skinGradeString = analysisResult.skinGrade.grade;
+        overallCondition = analysisResult.skinGrade.description || 'Unknown';
+      } else if (typeof analysisResult.skinGrade === 'string') {
+        skinGradeString = analysisResult.skinGrade;
+      }
     }
     
-    // Determine overall condition
-    if (skinGrade && typeof skinGrade === 'object' && skinGrade.grade) {
-      const grade = skinGrade.grade;
-      if (grade === 'A+' || grade === 'A') overallCondition = 'Excellent';
-      else if (grade === 'B+' || grade === 'B') overallCondition = 'Good';
-      else if (grade === 'C') overallCondition = 'Fair';
-      else if (grade === 'D') overallCondition = 'Needs Improvement';
-    } else if (typeof skinGrade === 'string') {
-      if (skinGrade.startsWith('A')) overallCondition = 'Excellent';
-      else if (skinGrade.startsWith('B')) overallCondition = 'Good';
-      else if (skinGrade.startsWith('C')) overallCondition = 'Fair';
-      else if (skinGrade.startsWith('D')) overallCondition = 'Needs Improvement';
+    // If we couldn't extract a grade, try to determine from acne score
+    if (skinGradeString === 'Unknown') {
+      const acneScore = analysisResult.acne || analysisResult.skin_attributes?.acne || 0;
+      if (acneScore <= 15) skinGradeString = 'A+';
+      else if (acneScore <= 30) skinGradeString = 'A';
+      else if (acneScore <= 45) skinGradeString = 'B+';
+      else if (acneScore <= 60) skinGradeString = 'B';
+      else if (acneScore <= 75) skinGradeString = 'C';
+      else skinGradeString = 'D';
     }
+    
+    // Determine overall condition from skin grade string
+    if (skinGradeString === 'A+' || skinGradeString === 'A') overallCondition = 'Excellent';
+    else if (skinGradeString === 'B+' || skinGradeString === 'B') overallCondition = 'Good';
+    else if (skinGradeString === 'C') overallCondition = 'Fair';
+    else if (skinGradeString === 'D') overallCondition = 'Needs Improvement';
+    else if (overallCondition === 'Unknown') overallCondition = 'Analyzed';
 
     // Check for duplicate within last hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -74,13 +93,13 @@ router.post("/save-analysis", async (req, res) => {
       });
     }
 
-    // Save to database
+    // Save to database - store skinGrade as string
     const newAnalysis = new History({
       userEmail,
       imageHash,
       imageUrl,
       analysisData: analysisResult,
-      skinGrade,
+      skinGrade: skinGradeString,  // Now a string, not an object
       overallCondition,
       timestamp: new Date()
     });
@@ -88,6 +107,7 @@ router.post("/save-analysis", async (req, res) => {
     await newAnalysis.save();
 
     console.log("Analysis saved successfully with ID:", newAnalysis._id);
+    console.log("Saved with skinGrade:", skinGradeString);
 
     res.status(201).json({
       success: true,
@@ -115,13 +135,12 @@ router.post("/save-analysis", async (req, res) => {
   }
 });
 
-// Get ALL analysis history (THIS IS THE PERMANENT FIX)
+// Get ALL analysis history
 router.get("/all", async (req, res) => {
   try {
     const { limit = 100, page = 1 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Use lean() for better performance and ensure we get plain objects
     const analyses = await History.find({})
       .sort({ timestamp: -1 })
       .skip(skip)
@@ -130,7 +149,6 @@ router.get("/all", async (req, res) => {
 
     const total = await History.countDocuments({});
 
-    // Map the data properly
     const formattedData = analyses.map(analysis => ({
       id: analysis._id,
       imageUrl: analysis.imageUrl,
@@ -290,13 +308,7 @@ router.get("/stats/:userEmail", async (req, res) => {
     const gradeDistribution = await History.aggregate([
       { $match: { userEmail } },
       { $group: { 
-        _id: { 
-          $ifNull: [
-            "$skinGrade.grade",
-            "$skinGrade",
-            "Unknown"
-          ]
-        }, 
+        _id: "$skinGrade", 
         count: { $sum: 1 } 
       } }
     ]);
@@ -351,12 +363,15 @@ router.post("/test", async (req, res) => {
       .update(testData.imageUrl + Date.now())
       .digest('hex');
 
+    // Extract grade string from the object
+    const skinGradeString = testData.analysisResult.skin_grade.grade;
+
     const newAnalysis = new History({
       userEmail: testData.userEmail,
       imageHash,
       imageUrl: testData.imageUrl,
       analysisData: testData.analysisResult,
-      skinGrade: testData.analysisResult.skin_grade,
+      skinGrade: skinGradeString,  // Store as string
       overallCondition: "Good"
     });
 
@@ -368,7 +383,7 @@ router.post("/test", async (req, res) => {
       id: newAnalysis._id,
       data: {
         userEmail: testData.userEmail,
-        skinGrade: testData.analysisResult.skin_grade.grade
+        skinGrade: skinGradeString
       }
     });
 
