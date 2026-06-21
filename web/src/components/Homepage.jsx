@@ -485,19 +485,19 @@ const Homepage = () => {
           <div className="about-grid">
             <div className="about-content">
               <span className="section-tag">Who We Are</span>
-              <h2 className="section-title">About Mediskin</h2>
+              <h2 className="section-title">About Med E-skin</h2>
               <div className="section-divider left"></div>
               <p className="about-text">
-                Mediskin is an innovative digital health platform that leverages artificial intelligence to revolutionize dermatological care. Our mission is to make professional-grade skin analysis accessible to everyone, providing accurate, real-time insights about skin health and potential concerns.
+                Med E-skin is an innovative digital health platform that leverages artificial intelligence to revolutionize dermatological care. Our mission is to make professional-grade skin analysis accessible to everyone, providing accurate, real-time insights about skin health and potential concerns.
               </p>
               <p className="about-text">
-                At the heart of Mediskin are two powerful AI-driven analysis systems. The Face Analysis feature evaluates facial characteristics including skin texture, tone, wrinkles, pores, and overall facial health. Our proprietary algorithms analyze uploaded images to provide detailed assessments and personalized recommendations for skincare routines, products, and treatments tailored to each user's unique facial characteristics.
+                At the heart of Med E-skin are two powerful AI-driven analysis systems. The Face Analysis feature evaluates facial characteristics including skin texture, tone, wrinkles, pores, and overall facial health. Our proprietary algorithms analyze uploaded images to provide detailed assessments and personalized recommendations for skincare routines, products, and treatments tailored to each user's unique facial characteristics.
               </p>
               <p className="about-text">
                 The Skin Disease Detection system uses advanced computer vision technology to identify potential skin conditions including acne, eczema, psoriasis, rosacea, and various other dermatological concerns. Users can simply upload an image of their skin concern and receive an AI-assisted preliminary assessment, helping them understand potential issues and determine appropriate next steps in consultation with healthcare professionals.
               </p>
               <p className="about-text">
-                Beyond analysis, Mediskin features an intelligent recommendation engine that suggests skincare products, treatment options, lifestyle adjustments, and preventive care strategies based on individual results. Our integrated mapping system helps users locate nearby dermatologists, clinics, hospitals, and skin care shops, creating a seamless bridge between digital analysis and real-world care. All of this is powered by deep learning models trained on thousands of dermatological images and clinical data, ensuring accurate, evidence-based insights that stay current with the latest medical research.
+                Beyond analysis, Med E-skin features an intelligent recommendation engine that suggests skincare products, treatment options, lifestyle adjustments, and preventive care strategies based on individual results. Our integrated mapping system helps users locate nearby dermatologists, clinics, hospitals, and skin care shops, creating a seamless bridge between digital analysis and real-world care. All of this is powered by deep learning models trained on thousands of dermatological images and clinical data, ensuring accurate, evidence-based insights that stay current with the latest medical research.
               </p>
             </div>
             <div className="about-features-list">
@@ -525,7 +525,7 @@ const Homepage = () => {
         <div className="container">
           <div className="section-header">
             <span className="section-tag">Meet Our Team</span>
-            <h2 className="section-title">The Minds Behind Mediskin</h2>
+            <h2 className="section-title">The Minds Behind Med E-skin</h2>
             <div className="section-divider"></div>
             <p className="section-subtitle">A dedicated team of professionals committed to excellence in dermatology and system innovation</p>
           </div>
@@ -603,7 +603,7 @@ const Homepage = () => {
                 </div>
                 <div className="contact-details-centered">
                   <h4>Email Us</h4>
-                  <p>mediskin@gmail.com</p>
+                  <p>mede-skin@gmail.com</p>
                 </div>
               </div>
             </div>
@@ -620,7 +620,7 @@ const Homepage = () => {
         <div className="container">
           <div className="section-header">
             <span className="section-tag">Watch Our Trailer</span>
-            <h2 className="section-title">See Mediskin in Action</h2>
+            <h2 className="section-title">See Med E-skin in Action</h2>
             <div className="section-divider"></div>
             <p className="section-subtitle">Experience how our AI technology transforms skin health analysis</p>
           </div>
@@ -660,7 +660,7 @@ const Homepage = () => {
           <div className="download-wrapper">
             <div className="download-content">
               <span className="section-tag download-tag">Get The App</span>
-              <h2 className="download-title">Download Mediskin App</h2>
+              <h2 className="download-title">Download Med E-skin App</h2>
               <div className="download-divider"></div>
               <p className="download-description">
                 Take control of your skin health with our AI-powered mobile application. 
@@ -747,7 +747,7 @@ const Homepage = () => {
               <button onClick={() => scrollToSection(downloadRef)}>Download</button>
             </div>
             <div className="footer-copyright">
-              © 2026 Mediskin AI. All rights reserved. | Developed by Arnel Bullo & Team
+              © 2026 Med E-skin AI. All rights reserved. | Developed by Arnel Bullo & Team
             </div>
           </div>
         </div>
