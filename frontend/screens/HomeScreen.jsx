@@ -337,7 +337,7 @@ export default function HomeScreen({ navigation, route }) {
             
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/logo5.png')}
+                source={require('../assets/logo1.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />

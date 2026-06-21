@@ -32,7 +32,7 @@ const COLORS = {
 };
 
 // 🔴 CHANGE THIS TO YOUR PC IP
-const DISEASE_API_URL = "http://192.168.1.136:8000";
+const DISEASE_API_URL = "http://192.168.1.9:8000";
 
 const { width } = Dimensions.get('window');
 const IMAGE_SIZE = (width - 60) / 3;

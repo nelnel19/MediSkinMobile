@@ -396,4 +396,205 @@ router.post("/test", async (req, res) => {
   }
 });
 
+
+// Add this new endpoint to history.js - Get disease statistics from analysisData
+
+// Get disease statistics from all analyses
+router.get("/disease-statistics", async (req, res) => {
+  try {
+    // First, try to get disease from analysisData.disease (if available)
+    let diseaseStats = await History.aggregate([
+      {
+        $match: {
+          $or: [
+            { "analysisData.disease": { $exists: true, $ne: null } },
+            { "analysisData.prediction": { $exists: true, $ne: null } },
+            { "analysisData.aggregated_result.disease": { $exists: true, $ne: null } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $ifNull: ["$analysisData.disease", false] },
+              "$analysisData.disease",
+              {
+                $cond: [
+                  { $ifNull: ["$analysisData.aggregated_result.disease", false] },
+                  "$analysisData.aggregated_result.disease",
+                  "$analysisData.prediction"
+                ]
+              }
+            ]
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          disease_name: "$_id",
+          count: 1,
+          _id: 0
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // If no disease field found, try to extract from acne_regions or other indicators
+    if (diseaseStats.length === 0) {
+      // Get all analyses and manually extract diseases from various possible fields
+      const allAnalyses = await History.find({}).lean();
+      const diseaseMap = new Map();
+      
+      allAnalyses.forEach(analysis => {
+        let disease = null;
+        
+        // Check various possible locations for disease name
+        if (analysis.analysisData) {
+          // Check for disease field
+          if (analysis.analysisData.disease) {
+            disease = analysis.analysisData.disease;
+          }
+          // Check for aggregated_result
+          else if (analysis.analysisData.aggregated_result?.disease) {
+            disease = analysis.analysisData.aggregated_result.disease;
+          }
+          // Check for prediction
+          else if (analysis.analysisData.prediction) {
+            disease = analysis.analysisData.prediction;
+          }
+          // Check for skin condition from skin_attributes
+          else if (analysis.analysisData.skin_attributes?.primary_condition) {
+            disease = analysis.analysisData.skin_attributes.primary_condition;
+          }
+        }
+        
+        if (disease && disease !== 'Unknown' && disease !== 'N/A') {
+          diseaseMap.set(disease, (diseaseMap.get(disease) || 0) + 1);
+        }
+      });
+      
+      diseaseStats = Array.from(diseaseMap.entries()).map(([disease_name, count]) => ({
+        disease_name,
+        count
+      })).sort((a, b) => b.count - a.count);
+    }
+
+    const totalAnalyses = await History.countDocuments({});
+
+    res.json({
+      success: true,
+      total_analyses: totalAnalyses,
+      disease_stats: diseaseStats,
+      total_diseases: diseaseStats.length
+    });
+
+  } catch (error) {
+    console.error('Get disease statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      disease_stats: []
+    });
+  }
+});
+
+// Get detailed analytics dashboard
+router.get("/analytics/dashboard", async (req, res) => {
+  try {
+    const totalAnalyses = await History.countDocuments({});
+    const totalUsers = await History.distinct("userEmail");
+    
+    // Get grade distribution
+    const gradeDistribution = await History.aggregate([
+      {
+        $group: {
+          _id: "$skinGrade",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+    
+    // Get monthly trends
+    const monthlyTrends = await History.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$timestamp" },
+            month: { $month: "$timestamp" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }
+      }
+    ]);
+    
+    // Get disease distribution from analysisData
+    let diseaseStats = await History.aggregate([
+      {
+        $match: {
+          $or: [
+            { "analysisData.disease": { $exists: true, $ne: null } },
+            { "analysisData.aggregated_result.disease": { $exists: true, $ne: null } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $ifNull: ["$analysisData.disease", "$analysisData.aggregated_result.disease"]
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          disease: "$_id",
+          count: 1,
+          _id: 0
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+    
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          total_analyses: totalAnalyses,
+          total_unique_users: totalUsers.length,
+          average_analyses_per_user: totalUsers.length > 0 ? (totalAnalyses / totalUsers.length).toFixed(2) : 0
+        },
+        grade_distribution: gradeDistribution.map(g => ({
+          grade: g._id || "Unknown",
+          count: g.count,
+          percentage: totalAnalyses > 0 ? ((g.count / totalAnalyses) * 100).toFixed(1) : 0
+        })),
+        disease_distribution: diseaseStats,
+        monthly_trends: monthlyTrends.map(t => ({
+          month: `${t._id.year}-${String(t._id.month).padStart(2, '0')}`,
+          count: t.count
+        }))
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
 export default router;

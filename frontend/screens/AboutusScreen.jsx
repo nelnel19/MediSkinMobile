@@ -36,7 +36,7 @@ const teamMembers = [
   },
   {
     name: "Jeremiah Estillore",
-    role: "Frontend Developer & Documentation",
+    role: "Documentation",
     image: require("../assets/image4.jpg"),
     bio: "Jeremiah focused on the app's design and user interface, making sure it was clean, responsive, and user-friendly. He also assisted in documentation.",
     icon: "layout",

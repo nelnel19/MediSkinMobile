@@ -1,5 +1,6 @@
-// components/SkinAnalysis.jsx
+// SkinAnalysis.jsx
 import React, { useState, useEffect } from 'react';
+import '../styles/skinanalysis.css';
 
 const SkinAnalysis = () => {
   const [statistics, setStatistics] = useState(null);
@@ -9,11 +10,10 @@ const SkinAnalysis = () => {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Python backend runs on port 8000
-  const API_BASE_URL = 'http://localhost:8000';
+  const API_BASE_URL = 'https://mediskin-backend-python.onrender.com';
 
-  // Fetch statistics on component mount
   useEffect(() => {
     fetchStatistics();
   }, []);
@@ -23,31 +23,26 @@ const SkinAnalysis = () => {
     setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/skin-history-statistics`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch statistics');
-      }
+      if (!response.ok) throw new Error('Failed to fetch statistics');
       const data = await response.json();
       setStatistics(data);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching statistics:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchDiseaseHistory = async (diseaseName) => {
+  const openModal = async (diseaseName) => {
     setLoadingDetails(true);
+    setIsModalOpen(true);
     try {
       const response = await fetch(`${API_BASE_URL}/skin-history-by-disease/${encodeURIComponent(diseaseName)}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch disease history');
-      }
+      if (!response.ok) throw new Error('Failed to fetch disease history');
       const data = await response.json();
       setDiseaseEntries(data.entries || []);
       setSelectedDisease(diseaseName);
     } catch (err) {
-      console.error('Error fetching disease history:', err);
       setError(err.message);
     } finally {
       setLoadingDetails(false);
@@ -55,6 +50,7 @@ const SkinAnalysis = () => {
   };
 
   const closeModal = () => {
+    setIsModalOpen(false);
     setSelectedDisease(null);
     setDiseaseEntries([]);
   };
@@ -62,7 +58,7 @@ const SkinAnalysis = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('en-PH', {
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -71,30 +67,45 @@ const SkinAnalysis = () => {
     });
   };
 
+  const getConfidenceClass = (confidence) => {
+    if (confidence >= 70) return 'confidence-high';
+    if (confidence >= 45) return 'confidence-medium';
+    return 'confidence-low';
+  };
+
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>Loading skin analysis data...</div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading analysis data...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h3>Error Loading Data</h3>
+      <div className="error-container">
+        <h3>Unable to load data</h3>
         <p>{error}</p>
-        <button onClick={fetchStatistics}>Retry</button>
+        <button onClick={fetchStatistics} className="retry-button">Try Again</button>
       </div>
     );
   }
 
   if (!statistics || statistics.total_entries === 0) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>No Skin Analysis Data</h2>
-        <p>No skin analysis records found in the database.</p>
-        <p>Start analyzing skin conditions to see statistics here.</p>
+      <div className="skin-analysis-wrapper">
+        <div className="skin-analysis-container">
+          <div className="empty-state">
+            <div className="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <h3>No Analysis Data</h3>
+            <p>No skin analysis records found in the database.<br />Start analyzing to see statistics here.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -103,264 +114,177 @@ const SkinAnalysis = () => {
     disease.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const topDisease = statistics.disease_stats.reduce((max, d) => d.count > max.count ? d : max, statistics.disease_stats[0]);
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '30px' }}>
-        <h1 style={{ color: '#2c3e50', marginBottom: '20px' }}>
-          📊 Skin Disease Analysis Dashboard
-        </h1>
-        
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '20px', 
-          marginBottom: '30px' 
-        }}>
-          <div style={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-            color: 'white', 
-            padding: '20px', 
-            borderRadius: '12px', 
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {statistics.total_entries}
-            </div>
-            <div>Total Analyses</div>
+    <div className="skin-analysis-wrapper">
+      <div className="skin-analysis-container">
+        {/* Header */}
+        <div className="header-section">
+          <div className="title-section">
+            <h1>Skin Disease Analysis</h1>
+            <p>Comprehensive overview of detection results and disease distribution</p>
           </div>
-          
-          <div style={{ 
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
-            color: 'white', 
-            padding: '20px', 
-            borderRadius: '12px', 
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {statistics.disease_stats.length}
+          <div className="header-stats">
+            <div className="header-stat-item">
+              <div className="header-stat-value">{statistics.total_entries}</div>
+              <div className="header-stat-label">Total Scans</div>
             </div>
-            <div>Unique Diseases</div>
-          </div>
-          
-          <div style={{ 
-            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', 
-            color: 'white', 
-            padding: '20px', 
-            borderRadius: '12px', 
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {new Date().toLocaleDateString()}
+            <div className="header-stat-item">
+              <div className="header-stat-value">{statistics.disease_stats.length}</div>
+              <div className="header-stat-label">Conditions</div>
             </div>
-            <div>Last Updated</div>
           </div>
         </div>
 
-        <div style={{ marginBottom: '30px' }}>
-          <input
-            type="text"
-            placeholder="🔍 Search for a disease..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 20px',
-              fontSize: '16px',
-              border: '2px solid #e0e0e0',
-              borderRadius: '8px',
-              boxSizing: 'border-box'
-            }}
-          />
+        {/* Quick Stats */}
+        <div className="quick-stats">
+          <div className="quick-pill">
+            <span>Most Common</span> {topDisease.name.replace(/_/g, ' ')}
+          </div>
+          <div className="quick-pill">
+            <span>Detection Rate</span> {topDisease.percentage}%
+          </div>
+          <div className="quick-pill">
+            <span>Active Cases</span> {statistics.total_entries}
+          </div>
         </div>
 
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
-          gap: '24px' 
-        }}>
+        {/* Search */}
+        <div className="search-wrapper">
+          <div className="search-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by disease name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Disease Grid */}
+        <div className="diseases-grid">
           {filteredDiseases.map((disease) => (
             <div 
               key={disease.name} 
-              onClick={() => fetchDiseaseHistory(disease.name)}
-              style={{
-                background: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s',
-                border: '1px solid #e0e0e0'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-              }}
+              className="disease-card"
+              onClick={() => openModal(disease.name)}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '24px' }}>🩺</span>
-                  <h3 style={{ margin: 0, color: '#2c3e50' }}>
-                    {disease.name.replace(/_/g, ' ')}
-                  </h3>
+              <div className="card-top">
+                <div className="card-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v4l3 3"/>
+                  </svg>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <span style={{ 
-                    display: 'inline-block', 
-                    background: '#667eea', 
-                    color: 'white', 
-                    padding: '4px 10px', 
-                    borderRadius: '20px', 
-                    fontWeight: 'bold', 
-                    fontSize: '18px',
-                    marginRight: '8px'
-                  }}>
-                    {disease.count}
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#7f8c8d' }}>cases</span>
+                <div className="card-title">
+                  <h4>{disease.name.replace(/_/g, ' ')}</h4>
+                  <p>Skin Condition</p>
+                </div>
+                <div className="card-count">
+                  {disease.count}<small> cases</small>
                 </div>
               </div>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                  <span style={{ color: '#7f8c8d' }}>Percentage:</span>
-                  <span style={{ fontWeight: 'bold', color: '#2c3e50' }}>
-                    {disease.percentage}%
-                  </span>
+              <div className="card-body">
+                <div className="metric-row">
+                  <span className="metric-label">Prevalence Rate</span>
+                  <span className="metric-value">{disease.percentage}%</span>
                 </div>
-                <div style={{ 
-                  width: '100%', 
-                  height: '8px', 
-                  background: '#ecf0f1', 
-                  borderRadius: '4px', 
-                  overflow: 'hidden' 
-                }}>
-                  <div style={{ 
-                    width: `${disease.percentage}%`, 
-                    height: '100%', 
-                    background: 'linear-gradient(90deg, #667eea, #764ba2)' 
-                  }}></div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${disease.percentage}%` }}></div>
                 </div>
               </div>
-              
-              <div style={{ textAlign: 'right', color: '#667eea', fontSize: '13px', fontWeight: '500' }}>
-                Click to view details →
+              <div className="card-footer">
+                <span>View Detailed Report</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
               </div>
             </div>
           ))}
         </div>
 
+        {/* No Results */}
         {filteredDiseases.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <p>No diseases found matching "{searchTerm}"</p>
+          <div className="empty-state">
+            <div className="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <h3>No Results Found</h3>
+            <p>No diseases match "{searchTerm}"</p>
           </div>
         )}
       </div>
 
-      {/* Modal for disease details */}
-      {selectedDisease && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }} onClick={closeModal}>
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto',
-            position: 'relative'
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{
-              padding: '20px',
-              borderBottom: '1px solid #e0e0e0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h2 style={{ margin: 0 }}>{selectedDisease.replace(/_/g, ' ')}</h2>
-              <button onClick={closeModal} style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer',
-                padding: '0 8px'
-              }}>×</button>
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedDisease?.replace(/_/g, ' ') || 'Disease Details'}</h2>
+              <button className="modal-close" onClick={closeModal}>×</button>
             </div>
-            <div style={{ padding: '20px' }}>
-              {loadingDetails ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>Loading entries...</div>
-              ) : (
-                <>
-                  <div style={{ marginBottom: '20px', padding: '10px', background: '#f8f9fa', borderRadius: '8px' }}>
-                    Total Entries: <strong>{diseaseEntries.length}</strong>
-                  </div>
-                  <div>
-                    {diseaseEntries.map((entry, index) => (
-                      <div key={entry.id} style={{
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '8px',
-                        padding: '15px',
-                        marginBottom: '15px'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <span style={{ fontWeight: 'bold' }}>#{index + 1}</span>
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            background: entry.confidence >= 70 ? '#d4edda' : entry.confidence >= 45 ? '#fff3cd' : '#f8d7da',
-                            color: entry.confidence >= 70 ? '#155724' : entry.confidence >= 45 ? '#856404' : '#721c24'
-                          }}>
-                            {entry.confidence}% confidence
-                          </span>
+            
+            {loadingDetails ? (
+              <div className="loading-spinner-small" />
+            ) : (
+              <>
+                <div className="modal-summary">
+                  <span className="modal-summary-label">Total Entries</span>
+                  <span className="modal-summary-value">{diseaseEntries.length}</span>
+                </div>
+                
+                <div className="modal-content">
+                  {diseaseEntries.map((entry, idx) => (
+                    <div key={entry.id} className="entry-card">
+                      <div className="entry-header">
+                        <span className="entry-number">Entry #{idx + 1}</span>
+                        <span className={`confidence-badge ${getConfidenceClass(entry.confidence)}`}>
+                          {entry.confidence}% confidence
+                        </span>
+                      </div>
+                      
+                      <div className="entry-details">
+                        <div className="detail-row">
+                          <span className="detail-label">User ID</span>
+                          <span className="detail-value">{entry.user_id}</span>
                         </div>
-                        <div style={{ fontSize: '14px', marginBottom: '8px' }}>
-                          <strong>User ID:</strong> {entry.user_id}
+                        <div className="detail-row">
+                          <span className="detail-label">Analysis Date</span>
+                          <span className="detail-value">{formatDate(entry.created_at_display)}</span>
                         </div>
-                        <div style={{ fontSize: '14px', marginBottom: '8px' }}>
-                          <strong>Date:</strong> {formatDate(entry.created_at_display)}
-                        </div>
-                        <div style={{ fontSize: '14px', marginBottom: '8px' }}>
-                          <strong>Status:</strong>{' '}
-                          <span style={{
-                            color: entry.status === 'completed' ? '#28a745' : '#dc3545',
-                            textTransform: 'capitalize'
-                          }}>
+                        <div className="detail-row">
+                          <span className="detail-label">Status</span>
+                          <span className={`status-badge ${entry.status === 'completed' ? 'status-completed' : 'status-pending'}`}>
                             {entry.status}
                           </span>
                         </div>
-                        {entry.image_url && (
-                          <div style={{ marginTop: '10px' }}>
-                            <a 
-                              href={entry.image_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              style={{ color: '#667eea', textDecoration: 'none' }}
-                            >
-                              View Image 🔍
-                            </a>
-                          </div>
-                        )}
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                      
+                      {entry.image_url && (
+                        <div className="entry-image-link">
+                          <a href={entry.image_url} target="_blank" rel="noopener noreferrer">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                              <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            View Medical Image
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

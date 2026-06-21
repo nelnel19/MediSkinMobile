@@ -1,3 +1,4 @@
+// UsersList.jsx - Fixed to show ALL users in directory tab
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../config/api';
 import {
@@ -38,6 +39,8 @@ const UsersList = () => {
   const [weeklyStats, setWeeklyStats] = useState([]);
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(20); // Show 20 users per page
 
   useEffect(() => {
     fetchUsers();
@@ -106,6 +109,7 @@ const UsersList = () => {
     }
   });
 
+  // Filtered users based on search and gender
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -113,130 +117,113 @@ const UsersList = () => {
     return matchesSearch && matchesGender;
   });
 
+  // Pagination logic
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   const totalNewUsersThisWeek = weeklyStats.reduce((sum, day) => sum + day.newUsers, 0);
   const averageAge = users.reduce((sum, user) => sum + (user.age || 0), 0) / (users.filter(u => u.age).length || 1);
   const activeUsers = users.filter(u => u.role === 'user').length;
 
-  // Chart Data
+  // Chart Data - Professional colors
+  const corporateGreen = '#2C553C';
+  const corporateLightGreen = '#86C8A3';
+  const corporateBlue = '#3B82F6';
+
   const weeklyChartData = {
     labels: weeklyStats.map(day => day.date),
-    datasets: [
-      {
-        label: 'New Users',
-        data: weeklyStats.map(day => day.newUsers),
-        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-        borderColor: '#3B82F6',
-        borderWidth: 2,
-        borderRadius: 8,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
-      },
-    ],
+    datasets: [{
+      label: 'New Users',
+      data: weeklyStats.map(day => day.newUsers),
+      backgroundColor: corporateLightGreen,
+      borderColor: corporateGreen,
+      borderWidth: 1,
+      borderRadius: 6,
+      barPercentage: 0.7,
+    }],
   };
 
   const monthlyChartData = {
     labels: monthlyStats.map(month => month.month),
-    datasets: [
-      {
-        label: 'New Users',
-        data: monthlyStats.map(month => month.newUsers),
-        backgroundColor: 'rgba(139, 92, 246, 0.7)',
-        borderColor: '#8B5CF6',
-        borderWidth: 2,
-        borderRadius: 8,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
-      },
-    ],
+    datasets: [{
+      label: 'New Users',
+      data: monthlyStats.map(month => month.newUsers),
+      backgroundColor: corporateLightGreen,
+      borderColor: corporateGreen,
+      borderWidth: 1,
+      borderRadius: 6,
+      barPercentage: 0.7,
+    }],
   };
 
   const genderChartData = {
     labels: ['Female', 'Male', 'Other'],
-    datasets: [
-      {
-        data: [genderStats.female, genderStats.male, genderStats.other],
-        backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'],
-        borderWidth: 0,
-        borderRadius: 8,
-      },
-    ],
+    datasets: [{
+      data: [genderStats.female, genderStats.male, genderStats.other],
+      backgroundColor: [corporateBlue, corporateGreen, corporateLightGreen],
+      borderWidth: 0,
+    }],
   };
 
   const ageChartData = {
     labels: Object.keys(ageGroups),
-    datasets: [
-      {
-        label: 'Users',
-        data: Object.values(ageGroups),
-        backgroundColor: 'rgba(139, 92, 246, 0.7)',
-        borderColor: '#8B5CF6',
-        borderWidth: 2,
-        borderRadius: 8,
-        barPercentage: 0.7,
-        categoryPercentage: 0.8,
-      },
-    ],
+    datasets: [{
+      label: 'Users',
+      data: Object.values(ageGroups),
+      backgroundColor: corporateLightGreen,
+      borderColor: corporateGreen,
+      borderWidth: 1,
+      borderRadius: 6,
+      barPercentage: 0.7,
+    }],
   };
 
   const cumulativeChartData = {
     labels: weeklyStats.map(day => day.date),
-    datasets: [
-      {
-        label: 'Total Users',
-        data: weeklyStats.map(day => day.cumulativeUsers),
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        pointBackgroundColor: '#3B82F6',
-        pointBorderColor: '#FFFFFF',
-        pointBorderWidth: 2,
-        pointHoverRadius: 6,
-      },
-    ],
+    datasets: [{
+      label: 'Total Users',
+      data: weeklyStats.map(day => day.cumulativeUsers),
+      borderColor: corporateGreen,
+      backgroundColor: 'rgba(44, 85, 60, 0.05)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 2,
+      pointBackgroundColor: corporateGreen,
+      pointBorderColor: '#FFFFFF',
+      pointBorderWidth: 1,
+    }],
   };
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         backgroundColor: '#FFFFFF',
-        titleColor: '#1E293B',
-        bodyColor: '#64748B',
-        borderColor: '#E2E8F0',
+        titleColor: '#1A2C3E',
+        bodyColor: '#5F7F6E',
+        borderColor: '#E9EDF2',
         borderWidth: 1,
         padding: 8,
-        cornerRadius: 8,
-        boxPadding: 4,
-        usePointStyle: true,
+        cornerRadius: 6,
+        titleFont: { size: 11, weight: '600' },
+        bodyFont: { size: 10 },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
-        grid: {
-          color: '#F1F5F9',
-          drawBorder: false,
-        },
-        ticks: {
-          stepSize: 1,
-          color: '#64748B',
-          font: { size: 11 },
-        },
+        grid: { color: '#F0F4F8', drawBorder: false },
+        ticks: { stepSize: 1, color: '#8BA0B0', font: { size: 10 } },
       },
       x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#64748B',
-          font: { size: 11 },
-        },
+        grid: { display: false },
+        ticks: { color: '#8BA0B0', font: { size: 10 } },
       },
     },
   };
@@ -248,10 +235,11 @@ const UsersList = () => {
       legend: {
         position: 'bottom',
         labels: {
-          color: '#475569',
-          font: { size: 11 },
+          color: '#5F7F6E',
+          font: { size: 10 },
           usePointStyle: true,
-          boxWidth: 8,
+          boxWidth: 6,
+          padding: 12,
         },
       },
       tooltip: {
@@ -286,196 +274,204 @@ const UsersList = () => {
   }
 
   return (
-    <div className="users-container">
-      {/* Header */}
-      <div className="users-header">
-        <div>
-          <h1 className="users-title">User Analytics</h1>
-        </div>
-        <button onClick={fetchUsers} className="refresh-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-          </svg>
-          Refresh
-        </button>
-      </div>
-
-      {/* Metrics Row */}
-      <div className="metrics-row">
-        <div className="metric-item">
-          <span className="metric-value">{genderStats.total}</span>
-          <span className="metric-label">Total</span>
-        </div>
-        <div className="metric-divider"></div>
-        <div className="metric-item">
-          <span className="metric-value">{activeUsers}</span>
-          <span className="metric-label">Active</span>
-        </div>
-        <div className="metric-divider"></div>
-        <div className="metric-item">
-          <span className="metric-value">{Math.round(averageAge)}</span>
-          <span className="metric-label">Avg Age</span>
-        </div>
-        <div className="metric-divider"></div>
-        <div className="metric-item">
-          <span className="metric-value">+{totalNewUsersThisWeek}</span>
-          <span className="metric-label">This Week</span>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="tabs">
-        <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
-          Overview
-        </button>
-        <button className={`tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
-          Analytics
-        </button>
-        <button className={`tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
-          Directory
-        </button>
-      </div>
-
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <div className="tab-panel">
-          <div className="two-columns">
-            <div className="card">
-              <div className="card-header">
-                <h3>Gender</h3>
-              </div>
-              <div className="chart-container-small">
-                <Doughnut data={genderChartData} options={genderChartOptions} />
-              </div>
-              <div className="gender-stats">
-                <div className="gender-row">
-                  <span>Female</span>
-                  <span>{genderStats.female} ({genderStats.femalePercentage}%)</span>
-                </div>
-                <div className="gender-row">
-                  <span>Male</span>
-                  <span>{genderStats.male} ({genderStats.malePercentage}%)</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <h3>Age Groups</h3>
-              </div>
-              <div className="chart-container-small">
-                <Bar data={ageChartData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, legend: { display: false } } }} />
-              </div>
-            </div>
+    <div className="users-list-wrapper">
+      <div className="users-container">
+        {/* Metrics Row */}
+        <div className="metrics-row">
+          <div className="metric-item">
+            <span className="metric-value">{genderStats.total}</span>
+            <span className="metric-label">Total</span>
           </div>
+          <div className="metric-divider"></div>
+          <div className="metric-item">
+            <span className="metric-value">{activeUsers}</span>
+            <span className="metric-label">Active</span>
+          </div>
+          <div className="metric-divider"></div>
+          <div className="metric-item">
+            <span className="metric-value">{Math.round(averageAge)}</span>
+            <span className="metric-label">Avg Age</span>
+          </div>
+          <div className="metric-divider"></div>
+          <div className="metric-item">
+            <span className="metric-value">+{totalNewUsersThisWeek}</span>
+            <span className="metric-label">This Week</span>
+          </div>
+        </div>
 
-          <div className="card full-width">
-            <div className="card-header">
-              <h3>Recent Joiners</h3>
+        {/* Tabs */}
+        <div className="tabs">
+          <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</button>
+          <button className={`tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>Analytics</button>
+          <button className={`tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>Directory</button>
+        </div>
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="tab-panel">
+            <div className="two-columns">
+              <div className="card">
+                <div className="card-header"><h3>Gender</h3></div>
+                <div className="chart-container-small"><Doughnut data={genderChartData} options={genderChartOptions} /></div>
+                <div className="gender-stats">
+                  <div className="gender-row"><span>Female</span><span>{genderStats.female} ({genderStats.femalePercentage}%)</span></div>
+                  <div className="gender-row"><span>Male</span><span>{genderStats.male} ({genderStats.malePercentage}%)</span></div>
+                </div>
+              </div>
+              <div className="card">
+                <div className="card-header"><h3>Age Groups</h3></div>
+                <div className="chart-container-small"><Bar data={ageChartData} options={chartOptions} /></div>
+              </div>
             </div>
-            <div className="recent-list">
-              {users.slice(0, 4).map(user => (
-                <div key={user._id} className="recent-item">
-                  <div className="recent-avatar">
-                    {user.profileImage?.url ? (
-                      <img src={user.profileImage.url} alt={user.name} />
-                    ) : (
-                      <div className="avatar-initial">{user.name?.charAt(0).toUpperCase()}</div>
-                    )}
+            <div className="card full-width">
+              <div className="card-header"><h3>Recent Joiners</h3></div>
+              <div className="recent-list">
+                {users.slice(0, 4).map(user => (
+                  <div key={user._id} className="recent-item">
+                    <div className="recent-avatar">
+                      {user.profileImage?.url ? <img src={user.profileImage.url} alt={user.name} /> : <div className="avatar-initial">{user.name?.charAt(0)}</div>}
+                    </div>
+                    <div className="recent-info"><div className="recent-name">{user.name}</div><div className="recent-email">{user.email}</div></div>
+                    <div className="recent-date">{new Date(user.createdAt).toLocaleDateString()}</div>
                   </div>
-                  <div className="recent-info">
-                    <div className="recent-name">{user.name}</div>
-                    <div className="recent-email">{user.email}</div>
-                  </div>
-                  <div className="recent-date">{new Date(user.createdAt).toLocaleDateString()}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Analytics Tab */}
-      {activeTab === 'analytics' && (
-        <div className="tab-panel">
-          <div className="card full-width">
-            <div className="card-header">
-              <h3>Weekly Registrations</h3>
-            </div>
-            <div className="chart-container-large">
-              <Bar data={weeklyChartData} options={chartOptions} />
-            </div>
-          </div>
-
-          <div className="card full-width">
-            <div className="card-header">
-              <h3>Monthly Registrations</h3>
-            </div>
-            <div className="chart-container-large">
-              <Bar data={monthlyChartData} options={chartOptions} />
-            </div>
-          </div>
-
-          <div className="card full-width">
-            <div className="card-header">
-              <h3>User Growth Trend</h3>
-            </div>
-            <div className="chart-container-large">
-              <Line data={cumulativeChartData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, tooltip: { ...chartOptions.plugins.tooltip } } }} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Directory Tab */}
-      {activeTab === 'users' && (
-        <div className="tab-panel">
-          <div className="filters">
-            <div className="search-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input type="text" placeholder="Search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <select value={filterGender} onChange={(e) => setFilterGender(e.target.value)}>
-              <option value="all">All</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
-          </div>
-
-          <div className="table-info">{filteredUsers.length} users</div>
-
-          <div className="table-container">
-            <table className="user-table">
-              <thead>
-                <tr><th>User</th><th>Email</th><th>Age</th><th>Gender</th><th>Role</th></tr>
-              </thead>
-              <tbody>
-                {filteredUsers.slice(0, 10).map(user => (
-                  <tr key={user._id}>
-                    <td>
-                      <div className="user-cell">
-                        {user.profileImage?.url ? (
-                          <img src={user.profileImage.url} alt={user.name} className="user-avatar" />
-                        ) : (
-                          <div className="user-avatar-placeholder">{user.name?.charAt(0).toUpperCase()}</div>
-                        )}
-                        <span>{user.name}</span>
-                      </div>
-                    </td>
-                    <td className="email-cell">{user.email}</td>
-                    <td>{user.age || '-'}</td>
-                    <td><span className={`gender-tag ${user.gender?.toLowerCase()}`}>{user.gender || '-'}</span></td>
-                    <td><span className={`role-tag ${user.role}`}>{user.role || 'user'}</span></td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="tab-panel">
+            <div className="card full-width"><div className="card-header"><h3>Weekly Registrations</h3></div><div className="chart-container-large"><Bar data={weeklyChartData} options={chartOptions} /></div></div>
+            <div className="card full-width"><div className="card-header"><h3>Monthly Registrations</h3></div><div className="chart-container-large"><Bar data={monthlyChartData} options={chartOptions} /></div></div>
+            <div className="card full-width"><div className="card-header"><h3>User Growth</h3></div><div className="chart-container-large"><Line data={cumulativeChartData} options={chartOptions} /></div></div>
+          </div>
+        )}
+
+        {/* Directory Tab - FIXED: Shows ALL users with pagination */}
+        {activeTab === 'users' && (
+          <div className="tab-panel">
+            <div className="filters">
+              <div className="search-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input 
+                  type="text" 
+                  placeholder="Search by name or email..." 
+                  value={searchTerm} 
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }} 
+                />
+              </div>
+              <select 
+                value={filterGender} 
+                onChange={(e) => {
+                  setFilterGender(e.target.value);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+              >
+                <option value="all">All Genders</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div className="table-info">
+              Showing {filteredUsers.length === 0 ? 0 : indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
+            </div>
+            
+            <div className="table-container">
+              <table className="user-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentUsers.length > 0 ? (
+                    currentUsers.map(user => (
+                      <tr key={user._id}>
+                        <td>
+                          <div className="user-cell">
+                            {user.profileImage?.url ? 
+                              <img src={user.profileImage.url} className="user-avatar" alt={user.name} /> : 
+                              <div className="user-avatar-placeholder">{user.name?.charAt(0)}</div>
+                            }
+                            <span>{user.name}</span>
+                          </div>
+                        </td>
+                        <td className="email-cell">{user.email}</td>
+                        <td>{user.age || '—'}</td>
+                        <td>
+                          <span className={`gender-tag ${user.gender?.toLowerCase()}`}>
+                            {user.gender || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`role-tag ${user.role}`}>
+                            {user.role || 'user'}
+                          </span>
+                        </td>
+                        <td className="email-cell">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                        No users found matching your criteria
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button 
+                  onClick={() => paginate(currentPage - 1)} 
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← Previous
+                </button>
+                <div className="pagination-numbers">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+                    <button
+                      key={number}
+                      onClick={() => paginate(number)}
+                      className={`pagination-number ${currentPage === number ? 'active' : ''}`}
+                    >
+                      {number}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => paginate(currentPage + 1)} 
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
