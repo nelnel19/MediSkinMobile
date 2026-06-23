@@ -1,4 +1,4 @@
-/* dashboard.css - CENTERED WITH NO EXTRA SPACES */
+/* dashboard.css - WITH REPORT STYLES */
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Outfit:wght@400;500;600;700&display=swap');
 
 * {
@@ -294,6 +294,256 @@
   transform: scale(1.02);
 }
 
+/* ============================================================
+   REPORT SECTION STYLES
+   ============================================================ */
+.report-section {
+  margin-top: 8px;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Report Header */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #F0F4F8;
+  background: #FAFCFE;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left h2 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0A261F;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.header-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #7A8F86;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.report-date {
+  text-align: right;
+  padding-right: 16px;
+  border-right: 1px solid #E8EDF2;
+}
+
+.date-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #7A8F86;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: block;
+}
+
+.report-date strong {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0A261F;
+  font-family: 'Outfit', monospace;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E8EDF2;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1A4A2F;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.export-btn:hover {
+  background: #F0F7F3;
+  border-color: #1A4A2F;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(26, 74, 47, 0.1);
+}
+
+.export-btn svg {
+  flex-shrink: 0;
+  color: #7A8F86;
+}
+
+.export-btn:hover svg {
+  color: #1A4A2F;
+}
+
+/* Report Body */
+.report-body {
+  padding: 16px 20px 12px;
+}
+
+/* Findings Table */
+.findings-table-wrapper {
+  overflow-x: auto;
+}
+
+.findings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.findings-table thead th {
+  text-align: left;
+  padding: 10px 12px 8px 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7A8F86;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid #E8EDF2;
+}
+
+.findings-table thead th:first-child {
+  width: 48px;
+  text-align: center;
+  padding-right: 8px;
+}
+
+.findings-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.findings-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+.findings-table tbody td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid #F0F4F8;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.findings-table tbody td:first-child {
+  text-align: center;
+  font-weight: 700;
+  color: #7A8F86;
+  font-family: 'Outfit', monospace;
+  font-size: 11px;
+  padding-right: 8px;
+  width: 48px;
+  padding-top: 11px;
+}
+
+.finding-text {
+  margin: 0;
+  color: #1A2C3E;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Highlighted metrics in findings */
+.highlight-number {
+  font-weight: 800;
+  color: #1A4A2F;
+  background: #F0F7F3;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Outfit', monospace;
+}
+
+.metric-badge {
+  display: inline-block;
+  font-weight: 700;
+  color: #1565C0;
+  background: #E8F0FE;
+  padding: 1px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-family: 'Outfit', monospace;
+}
+
+.percentage-badge {
+  color: #1A4A2F;
+  background: #E8F5EE;
+}
+
+/* Report Footer */
+.report-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.footer-divider {
+  height: 1px;
+  background: linear-gradient(to right, #E8EDF2, transparent);
+  margin-bottom: 10px;
+}
+
+.footer-text {
+  font-size: 10px;
+  font-weight: 500;
+  color: #7A8F86;
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* Report Loading */
+.report-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 30px 20px;
+}
+
+.loading-spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(26, 74, 47, 0.1);
+  border-top-color: #1A4A2F;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.report-loading span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #7A8F86;
+}
+
+.report-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: #7A8F86;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .dashboard-container {
@@ -346,6 +596,49 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .report-date {
+    border-right: none;
+    padding-right: 0;
+    text-align: left;
+  }
+
+  .export-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .export-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+  }
+
+  .report-body {
+    padding: 12px 14px;
+  }
+
+  .findings-table tbody td {
+    padding: 8px 8px 8px 0;
+    font-size: 11px;
+  }
+
+  .findings-table thead th {
+    padding: 8px 8px 6px 0;
+    font-size: 9px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -364,5 +657,51 @@
   .split-left,
   .split-right {
     padding: 12px;
+  }
+
+  .report-header {
+    padding: 12px 14px;
+  }
+
+  .header-left h2 {
+    font-size: 14px;
+  }
+
+  .report-body {
+    padding: 10px 12px;
+  }
+
+  .findings-table tbody td {
+    padding: 6px 6px 6px 0;
+    font-size: 10px;
+  }
+
+  .findings-table tbody td:first-child {
+    width: 32px;
+    font-size: 9px;
+    padding-right: 4px;
+  }
+
+  .finding-text {
+    font-size: 10px;
+  }
+
+  .metric-badge {
+    font-size: 9px;
+    padding: 0 5px;
+  }
+
+  .highlight-number {
+    font-size: 10px;
+    padding: 0 4px;
+  }
+
+  .export-btn {
+    font-size: 10px;
+    padding: 5px 10px;
+  }
+
+  .report-date strong {
+    font-size: 11px;
   }
 }

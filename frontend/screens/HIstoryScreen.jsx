@@ -20,7 +20,7 @@ import { API_URL } from '../config/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // FastAPI URL for skin disease history
-const DISEASE_API_URL = "http://10.232.166.161:8000";
+const DISEASE_API_URL = "http://172.34.9.253:8000";
 
 // Color Theme
 const COLORS = {

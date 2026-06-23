@@ -59,6 +59,7 @@ export default function SkincareScreen({ navigation }) {
   const [showQualityWarning, setShowQualityWarning] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(null);
   const [tempPhoto, setTempPhoto] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // New state for privacy during analysis
 
   useEffect(() => {
     loadUserEmail();
@@ -469,6 +470,7 @@ export default function SkincareScreen({ navigation }) {
     }
 
     try {
+      setIsAnalyzing(true); // Start analysis - this will hide photos
       setLoading(true);
       
       const formData = new FormData();
@@ -513,6 +515,7 @@ export default function SkincareScreen({ navigation }) {
       }
     } finally {
       setLoading(false);
+      setIsAnalyzing(false); // Analysis complete - show photos again
     }
   };
 
@@ -522,6 +525,7 @@ export default function SkincareScreen({ navigation }) {
     setResult(null);
     setShowRetakeModal(false);
     setErrorMessage("");
+    setIsAnalyzing(false);
   };
 
   const pickImage = async () => {
@@ -556,6 +560,7 @@ export default function SkincareScreen({ navigation }) {
 
   const analyzeSinglePhoto = async (imageUri) => {
     try {
+      setIsAnalyzing(true); // Start analysis - this will hide photos
       setLoading(true);
       
       const formData = new FormData();
@@ -585,6 +590,7 @@ export default function SkincareScreen({ navigation }) {
       Alert.alert("Error", "Failed to analyze image. Please try again.");
     } finally {
       setLoading(false);
+      setIsAnalyzing(false); // Analysis complete - show photos again
     }
   };
 
@@ -1002,6 +1008,25 @@ export default function SkincareScreen({ navigation }) {
     );
   };
 
+  // Privacy Analysis Overlay - shows during analysis to hide photos
+  const PrivacyAnalysisOverlay = () => (
+    <View style={styles.privacyOverlay}>
+      <View style={styles.privacyCard}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={styles.privacyTitle}>Analyzing Your Skin</Text>
+        <Text style={styles.privacySubtext}>
+          Please wait while we analyze your skin condition
+        </Text>
+        <View style={styles.privacyShieldIcon}>
+          <Icon name="shield" size={32} color={COLORS.accent} />
+        </View>
+        <Text style={styles.privacyNote}>
+          Your photos are being processed securely
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
@@ -1035,7 +1060,8 @@ export default function SkincareScreen({ navigation }) {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.imageSection}>
-              {photos.length > 0 ? (
+              {/* Show photos only when not analyzing and not loading */}
+              {!isAnalyzing && !loading && photos.length > 0 ? (
                 <View style={styles.photosContainer}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
                     {photos.map((photo, index) => (
@@ -1054,6 +1080,9 @@ export default function SkincareScreen({ navigation }) {
                     <Text style={styles.removeAllText}>Clear All</Text>
                   </TouchableOpacity>
                 </View>
+              ) : (isAnalyzing || loading) && photos.length > 0 ? (
+                /* Show privacy overlay during analysis instead of photos */
+                <PrivacyAnalysisOverlay />
               ) : (
                 <View style={styles.placeholderContainer}>
                   <Icon name="camera-alt" size={48} color={COLORS.secondary} />
@@ -1068,23 +1097,24 @@ export default function SkincareScreen({ navigation }) {
             </View>
 
             <View style={styles.uploadSection}>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <Icon name="photo-library" size={24} color={COLORS.accent} />
-                <Text style={styles.uploadButtonText}>Gallery</Text>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImage} disabled={isAnalyzing || loading}>
+                <Icon name="photo-library" size={24} color={isAnalyzing || loading ? COLORS.secondary : COLORS.accent} />
+                <Text style={[styles.uploadButtonText, isAnalyzing || loading && styles.disabledText]}>Gallery</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.uploadButton, photos.length > 0 && styles.uploadButtonActive]} 
                 onPress={() => setShowCamera(true)}
+                disabled={isAnalyzing || loading}
               >
-                <Icon name="photo-camera" size={24} color={photos.length > 0 ? COLORS.success : COLORS.accent} />
-                <Text style={styles.uploadButtonText}>
+                <Icon name="photo-camera" size={24} color={isAnalyzing || loading ? COLORS.secondary : (photos.length > 0 ? COLORS.success : COLORS.accent)} />
+                <Text style={[styles.uploadButtonText, isAnalyzing || loading && styles.disabledText]}>
                   {photos.length === 0 ? "Start" : photos.length === 3 ? "Retake" : `Take Photo ${photos.length + 1}/3`}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {photos.length === 3 && !result && (
+            {photos.length === 3 && !result && !isAnalyzing && !loading && (
               <TouchableOpacity
                 style={[styles.analyzeButton, loading && styles.analyzeButtonDisabled]}
                 onPress={() => analyzeFrontPhoto(photos)}
@@ -1101,7 +1131,7 @@ export default function SkincareScreen({ navigation }) {
               </TouchableOpacity>
             )}
 
-            {photos.length > 0 && photos.length < 3 && !result && (
+            {photos.length > 0 && photos.length < 3 && !result && !isAnalyzing && !loading && (
               <View style={styles.incompleteWarning}>
                 <Icon name="info" size={20} color={COLORS.warning} />
                 <Text style={styles.incompleteWarningText}>
@@ -1632,6 +1662,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: 8,
   },
+  disabledText: {
+    color: COLORS.secondary,
+  },
   analyzeButton: {
     backgroundColor: COLORS.accent,
     paddingVertical: 16,
@@ -1678,6 +1711,41 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+  // Privacy Overlay Styles
+  privacyOverlay: {
+    height: 200,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(163, 107, 79, 0.2)',
+  },
+  privacyCard: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  privacyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  privacySubtext: {
+    fontSize: 14,
+    color: COLORS.secondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  privacyShieldIcon: {
+    marginBottom: 12,
+  },
+  privacyNote: {
+    fontSize: 12,
+    color: COLORS.secondary,
+    fontStyle: 'italic',
   },
   // Acne Location Text Styles
   acneLocationCard: {
